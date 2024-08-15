@@ -1,0 +1,8 @@
+<?php
+  
+  $server  = 'address';
+  $webuser = 'username';
+  $webpass = 'password';
+  $dbname  = 'foo';
+
+?>

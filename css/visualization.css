@@ -1,0 +1,92 @@
+#vis_anom_summary_list tbody td {
+    cursor: pointer;
+}
+
+.vis_main-wrapper {
+    overflow: hidden;
+    overflow-y: auto;
+    display: flex;
+    flex-flow: column nowrap;
+    width: 100%;
+}
+
+.vis_subheader-text {
+    padding: 20px 0px;
+    flex-basis: 62px;
+    height: 62px;
+}
+
+.vis_job-title {
+    font-weight: bold;
+    font-size: 16px;
+    text-decoration: underline;
+}
+
+.vis_job-summ-content {}
+
+.vis_job-summ-entry {
+    display: block;
+}
+
+.vis_job-summ-label {
+    display: inline-block;
+    font-weight: bold;
+    width: 125px;
+}
+
+.vis_job-summ-value {
+    display: inline-block;
+    font-family: monospace;
+    font-size: 14px;
+}
+
+.vis_map_container {
+    height: 300px;
+}
+
+.vis_anom_summary_list {
+    
+}
+
+.vis_charting-content {
+    flex: 1 1;
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+.vis_header-form {
+    display: flex;
+    flex-flow: row nowrap;
+}
+
+.vis_controls-section {
+    padding: 10px 5px;
+    border-bottom: 1px solid #A1A1A1;
+    flex: 1 1;
+}
+
+.vis_controls-section-mini {
+    flex-grow: 0.6;
+}
+
+.vis_controls-row {}
+
+.vis_controls-row-max {
+    flex: 1 1;
+}
+
+.vis_labeled-input,
+.vis_labeled-select {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.vis_button-row {
+    text-align: right;
+}
+
+.vis_charts-list {
+    padding: 12px 0px;
+}

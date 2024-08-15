@@ -1,0 +1,376 @@
+.left {
+  width:380px;
+  height:500px;
+  ##float:left;
+  ## background:blue;
+  vertical-align: top;
+}
+
+.right {
+  width:calc(100% - 380px);
+  min-width:800px;
+  height:500px;
+  ##float:right;
+  ## background:red;
+}
+
+.pleft {
+  width: 500px;
+  vertical-align: top;
+  padding-right: 20px;
+}
+
+.qleft {
+  width: 400px;
+  vertical-align: top;
+  padding-right: 20px;
+}
+
+label.normal12     
+{       
+  font: 12pt sans-serif,arial,helvetica;
+  color: black;
+}
+
+label.bold12     
+{       
+  font: 12pt sans-serif,arial,helvetica;
+  color: black;
+  font-weight: bold;
+  #padding-left: 10px;
+}
+
+label.lbold12     
+{       
+  font: 12pt sans-serif,arial,helvetica;
+  color: black;
+  font-weight: bold;
+  display: inline-block; 
+  width:110px;
+  #padding-left: 10px;
+}
+
+label.pbold12     
+{       
+  font: 12pt sans-serif,arial,helvetica;
+  color: black;
+  font-weight: bold;
+  display: inline-block; 
+  width: 200px;
+}
+
+label.qbold12     
+{       
+  font: 12pt sans-serif,arial,helvetica;
+  color: black;
+  font-weight: bold;
+  display: inline-block; 
+  width: 150px;
+}
+
+label.cbold12     
+{       
+  font: 12pt sans-serif,arial,helvetica;
+  color: black;
+  font-weight: bold;
+  display: inline-block; 
+  #width:110px;
+  #padding-left: 10px;
+}
+
+input.normal10     
+{       
+  font: 10pt sans-serif,arial,helvetica;
+  color: black;
+}
+
+input.normal12     
+{       
+  font: 12pt sans-serif,arial,helvetica;
+  color: black;
+}
+
+select.normal10     
+{       
+  font: 10pt sans-serif,arial,helvetica;
+  color: black;
+}
+
+select.normal12     
+{       
+  font: 12pt sans-serif,arial,helvetica;
+  color: black;
+}
+
+td.bold12     
+{       
+  font: 12pt sans-serif,arial,helvetica;
+  color: black;
+  font-weight: bold;
+  #padding-left: 10px;
+}
+
+td.normal12     
+{       
+  font: 12pt sans-serif,arial,helvetica;
+  color: black;
+}
+
+td.normal10     
+{       
+  font: 10pt sans-serif,arial,helvetica;
+  color: black;
+}
+
+td.normal8     
+{       
+  font: 10pt sans-serif,arial,helvetica;
+  color: black;
+}
+
+.mbutton 
+{
+  border-radius: 5px;
+  color: #ffffff; 
+  background-color: #1B6CBD; 
+  #border-color: red; 
+  padding: 5px;
+  cursor: "pointer";
+}
+
+.submit_button 
+{
+  border-radius: 5px;
+  color: #ffffff; 
+  background-color: #1B6CBD; 
+  #border-color: #130269; 
+  padding: 5px;
+  cursor: "pointer";
+}
+
+#jobID_submit
+{
+  border-radius: 5px;
+  color: #ffffff; 
+  background-color: #1B6CBD; 
+  #border-color: #130269; 
+  padding: 1px;
+}
+
+.ibutton 
+{
+  border-radius: 5px;
+  color: #ffffff; 
+  background-color: #1B6CBD; 
+  #border-color: #130269; 
+  padding: 1px;
+}
+
+td.job_label
+{
+  font: bold 12pt sans-serif,arial,helvetica;
+  color: black;
+  text-align: right;
+  padding: 2px;
+}
+
+.btn 
+{
+  font: bold 6pt sans-serif,arial,helvetica;
+  height: 30px;
+  width: 350x;
+  color: #ffffff; 
+  border-radius: 50%;
+  background-color: #1B6CBD; 
+  border: 1px solid red;
+}
+
+.arrow-up {
+  width: 0; 
+  height: 0; 
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  
+  border-bottom: 10px solid #1B6CBD;
+}
+
+.arrow-down {
+  width: 0; 
+  height: 0; 
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  
+  border-top: 10px solid #1B6CBD;
+}
+
+.arrow-right {
+  width: 0; 
+  height: 0; 
+  border-top: 15px solid transparent;
+  border-bottom: 15px solid transparent;
+  
+  border-left: 15px solid  #1B6CBD;
+}
+
+.arrow-left {
+  width: 0; 
+  height: 0; 
+  border-top: 15px solid transparent;
+  border-bottom: 15px solid transparent; 
+  
+  border-right:15px solid  #1B6CBD; 
+}
+
+.myTD {
+  background-color:#eee; 
+  border:1px solid #000; 
+  font: bold 12pt sans-serif,arial,helvetica; 
+  text-align: center;
+}
+
+.evenTD {
+  background-color: #F1F1F1; 
+  font: 12pt sans-serif,arial,helvetica; 
+  padding: 1px;
+  padding-left: 10px;
+  width: 100%;
+  cursor: "pointer";
+}
+
+.oddTD {
+  background-color: #FFFFFF; 
+  font: 12pt sans-serif,arial,helvetica; 
+  padding: 1px;
+  padding-left: 10px;
+  width: 100%;
+  cursor: "pointer";
+}
+
+.evenTD2 {
+  background-color: #F1F1F1; 
+  font: 12pt sans-serif,arial,helvetica; 
+  padding: 1px;
+  padding-left: 5px;
+  width: 100%;
+  text-align: center;
+}
+
+.oddTD2 {
+  background-color: #FFFFFF; 
+  font: 12pt sans-serif,arial,helvetica; 
+  padding: 1px;
+  padding-left: 5px;
+  text-align: center;
+  width: 100%;
+}
+
+.evenDiv {
+  background-color: #F1F1F1;
+  font: 12pt sans-serif,arial,helvetica;
+  padding: 1px;
+  padding-left: 10px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.evenDiv:hover {
+  background-color: #3498DB;
+}
+
+.oddDiv {
+  background-color: #FFFFFF;
+  font: 12pt sans-serif,arial,helvetica;
+  padding: 1px;
+  padding-left: 10px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.oddDiv:hover {
+  background-color: #3498DB;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #FFFFFF;
+  max-height: 200px;
+  width: 200px;
+  overflow: auto;
+  text-align: center;
+  border: 1px solid black;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.dropdown-content a {
+  color: black;
+  padding: 2px 2px;
+  text-decoration: none;
+  display: block;
+  font: 12pt sans-serif,arial,helvetica;
+}
+
+.dropdown-content a:hover {
+  background-color: #D3D3D3;
+}
+
+.evenAnomalyDiv {
+  background-color: #F1F1F1;
+  font: 12pt sans-serif,arial,helvetica;
+  padding: 1px;
+  padding-left: 10px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.evenAnomalyDiv:hover {
+  //background-color: #3498DB;
+  cursor: pointer;
+}
+
+.oddAnomalyDiv {
+  background-color: #FFFFFF;
+  font: 12pt sans-serif,arial,helvetica;
+  padding: 1px;
+  padding-left: 10px;
+  width: 100%;
+  cursor: pointer;
+}
+
+.oddAnomalyDiv:hover {
+  //background-color: #3498DB;
+  cursor: pointer;
+}
+
+*,
+*:focus,
+*:hover {
+  outline: none;
+}
+
+.myimg
+{
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.tdwait
+{
+  font: 10pt sans-serif,arial,helvetica;
+  padding-left: 10px;
+  text-align: center;
+}
+
+.table.dataTable  {
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  font-size: 13px;
+}
+
+.qth {
+  font-size: 13px;
+  font-weight: bold;
+  text-align: center;
+}
+
