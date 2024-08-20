@@ -2,6 +2,7 @@
 
 [![Language](https://img.shields.io/packagist/dependency-v/ufo-tech/json-rpc-client-sdk/php?logo=PHP&logoColor=white)](#) [![Language](https://img.shields.io/badge/python-3.9-blue)](#)
 
+The ``user-interface`` library is part of the of the TOS2CA Project. For more information, visit the TOS2CA website at [https://nasa-jpl.github.io/tos2ca-documentation/](https://nasa-jpl.github.io/tos2ca-documentation/).
 
 ## Overview
 The TOS2CA user interface is designed to submit jobs to the TOS2CA system.  This can be done through the graphical interface on the website or through RESTful API calls.  
