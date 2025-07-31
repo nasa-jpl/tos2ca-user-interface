@@ -116,7 +116,7 @@
               <input id="job_id_input" name="job_id_input" class="normal10" placeholder="1234" />
             </div>
             <div class="vis_button-row">
-              <input type="button" class="mbutton" tabindex="12" value="Fetch Job" onClick="fetchJob()" />
+              <input id="fetch_job_btn" type="button" class="mbutton vis_btn vis_job-fetch-btn" tabindex="12" value="Fetch Job" onClick="fetchJob()" />
             </div>
           </div>
           <div id="job_summary_wrapper" class="vis_controls-row"></div>
