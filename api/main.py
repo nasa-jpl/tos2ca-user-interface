@@ -155,8 +155,18 @@ async def list(q: str):
 
 
 @api_router.get("/location")
-async def status(jobID: int):
+async def location(jobID: int):
   return getLocationByjobID(jobID) 
+
+
+@api_router.get("/nc4")
+async def nc4(jobID: int, typep: str):
+  return getOutputLocation(jobID, typep) 
+
+
+@api_router.get("/monthly")
+async def monthly(month: str):
+  return getMonthlyData(month) 
 
 
 ####################################################
@@ -215,8 +225,9 @@ def getStatusByjobID(jobID, stage):
   return msg
 
 
-def getLocationByjobID(jobID):
-  sql = "SELECT j.phdefJobID, j.jobID, o.location, j.variable, j.description FROM output o, jobs j WHERE o.jobID=j.jobID AND o.type='interpolated subset' AND j.phdefJobID={}".format(jobID)
+def getOutputLocation(jobID, typep):
+
+  sql = "SELECT o.location FROM output o WHERE o.jobID={} AND o.type='{}'".format(jobID, typep)
   ##print(sql)
 
   conn, cur = mysqlconnect()
@@ -232,6 +243,33 @@ def getLocationByjobID(jobID):
         msg.append(item)
     else:
       msg.append({"jobID": jobID, "location": 'not foundd', "variable": 'not found'})
+  except:
+    msg.append({"jobID": jobID, "location": "Query Failed", "variable": 'Query Failed'})
+  finally:
+    conn.close()
+
+  return msg
+
+def getLocationByjobID(jobID):
+  sql = "SELECT j.phdefJobID, j.jobID, o.location, j.variable, j.description FROM output o, jobs j WHERE o.jobID=j.jobID AND o.type='interpolated subset' AND j.phdefJobID={}".format(jobID)
+
+  conn, cur = mysqlconnect()
+
+  msg = []
+  try:
+    cur.execute(sql)
+    output = cur.fetchall()
+    filteredOutput = []
+    for o in output:
+        if o['location'].split('/')[-1].count('-') == 2:
+            filteredOutput.append(o)
+    output = filteredOutput
+
+    if (len(output) > 0):
+      for item in output:
+        msg.append(item)
+    else:
+      msg.append({"jobID": jobID, "location": 'not found', "variable": 'not found'})
   except:
     msg.append({"jobID": jobID, "location": "Query Failed", "variable": 'Query Failed'})
   finally:
@@ -317,6 +355,16 @@ def mysqlconnect():
 
   cur = conn.cursor(pymysql.cursors.DictCursor)
   return (conn, cur)
+
+
+from pathlib import Path
+download_dir = '/home/qvu/wrk/python/anomaly-detection/src/utils/downloads'
+
+def getMonthlyData(month): 
+  fname = f'{download_dir}/{month}.txt'
+  print(fname)
+  txt = Path(fname).read_text()
+  return txt
 
 
 api_router.include_router(api_phdef_router)
