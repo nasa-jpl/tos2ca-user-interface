@@ -1,11 +1,10 @@
 <?php
 
-  require '/data/code/user-interface/aws.phar';
+  require 'aws.phar';
   require 'common.php';
 
   $key = $_GET['key'];
   $key = myDecrypt($key);
-  //echo("$key<br>");
 
   argumentCountValidate($_GET, 1);
   fireFilenameCheck($key);
@@ -16,7 +15,7 @@
   ]);
 
   $object = $s3->getObject(array(
-    'Bucket' => 'tos2ca-dev1',
+    'Bucket' => 'your-bucket-name',
     'Key' => $key,
   ));
 

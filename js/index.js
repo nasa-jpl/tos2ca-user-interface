@@ -198,14 +198,14 @@ function setUnit(select)
         if (item === variable)
         {
           var unit = units[item];
-          var inequality_unit_label = document.getElementById('inequality_unit_label');
+          var inequality_unit_label = document.getElementById('inequality_unit_fortracc_label');
           inequality_unit_label.innerHTML = `(${unit})`;
         }
       }
     }
   }
 
-  var inequality_unit = document.getElementById('inequality_unit');
+  var inequality_unit = document.getElementById('inequality_fortracc_unit');
   inequality_unit.disabled = false;
 }
 

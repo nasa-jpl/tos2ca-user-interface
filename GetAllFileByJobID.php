@@ -1,6 +1,6 @@
 <?php
 
-require '/data/code/user-interface/aws.phar';
+require 'aws.phar';
 
 $jobID = (string)$_GET['jobID'];
 
@@ -21,7 +21,7 @@ $s3 = new Aws\S3\S3Client([
   'region' => 'us-west-2',
   'version' => 'latest'
 ]);
-$bucket_name = 'tos2ca-dev1';
+$bucket_name = 'your-bucket-name';
 
 $arr = [];
 try 

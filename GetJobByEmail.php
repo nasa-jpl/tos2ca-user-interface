@@ -8,7 +8,7 @@
   argumentCountValidate($_POST, 1);
   emailValidate($email);
 
-  $sql = "select j.jobID, j.stage, j.phdefJobID, j.dataset, j.variable, j.startDate, j.endDate, j.ineqOperator, j.ineqValue, TRIM(REPLACE(REPLACE(j.description, CHAR(13), ''), CHAR(10), '')) as description, j.status, j.submitTime, ST_AsText(coords) from jobs j where j.jobID IN (select j.jobID from users u, jobs j where (u.email = ?) and (j.userId = u.userID)) order by j.jobID DESC";
+  $sql = "select j.jobID, j.stage, j.phdefJobID, j.dataset, j.variable, j.startDate, j.endDate, j.ineqOperator, j.ineqValue, j.algorithm, j.warmerToggle, j.warmerValue, TRIM(REPLACE(REPLACE(j.description, CHAR(13), ''), CHAR(10), '')) as description, j.status, j.submitTime, ST_AsText(coords) from jobs j where j.jobID IN (select j.jobID from users u, jobs j where (u.email = ?) and (j.userId = u.userID)) order by j.jobID DESC";
   $param = array('s', &$email);
   $result = getSQLResultP($sql, $param);
 

@@ -98,7 +98,6 @@
   </script>
 
 <script>
-
 const dictionary_file = 'tos2ca-phdef-dictionary.json';
 
 const MAX_AREA = 250;  //50x50 
@@ -111,7 +110,7 @@ async function init()
   const map = L.map('map', {minZoom:2, maxZoom:11}).setView([0,0] ,2);
 
   const tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  	    maxZoom: 18,
+  	        maxZoom: 18,
             attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
   }).addTo(map);
 
@@ -179,7 +178,28 @@ async function init()
   dictJSON = await getDictionary(dictionary_file);
   buildDatasetMenu(dictJSON);
 }
+</script>
 
+<script>
+function algorithmSelect() {
+  const selectedValue = document.getElementById("algorithm").value;
+  // On initial page load, all these elements are hidden by default
+  if (selectedValue === "fortracc") {
+    document.getElementById("dataset_fortracc").style.display = "table-row";
+    document.getElementById("dataset_auxgeoir").style.display = "none";
+    document.getElementById("job_variable_fortracc").style.display = "table-row";
+    document.getElementById("job_variable_auxgeoir").style.display = "none";
+    document.getElementById("ineq_fortracc").style.display = "table-row";
+    document.getElementById("ineq_auxgeoir").style.display = "none";
+  } else if (selectedValue === "auxgeoir") {
+    document.getElementById("dataset_fortracc").style.display = "none";
+    document.getElementById("dataset_auxgeoir").style.display = "table-row";
+    document.getElementById("job_variable_fortracc").style.display = "none";
+    document.getElementById("job_variable_auxgeoir").style.display = "table-row";  
+    document.getElementById("ineq_fortracc").style.display = "none";
+    document.getElementById("ineq_auxgeoir").style.display = "table-row";
+  }
+}
 </script>
 
 </head>
@@ -223,7 +243,7 @@ async function init()
     </tr>
     <tr>
       <td class="left">
-        <table>
+        <table style="margin-right: 10px;">
           <tr>
             <td style="padding-top: 5px;">
               <label for="firstname" class="lbold12">First Name</label>
@@ -247,21 +267,46 @@ async function init()
           </tr>
           <tr>
             <td nowrap style="white-space:nowrap; padding-top: 5px; padding-right: 10px;">
-              <label for="dataset" class="lbold12">Dataset</label>
-	        <select style="width: 340px;" class="normal10" id="dataset" name="dataset" tabindex="4" onChange="buildJobVariableMenu(this)"></select>
+              <label for="algorithm" class="lbold12">Algorithm</label>
+	            <select style="width: 340px;" class="normal10" id="algorithm" name="algorithm" tabindex="9" onChange="algorithmSelect()">
+                <option SELECTED></option>
+                <option value="fortracc">ForTraCC</option>
+                <option value="auxgeoir">AUX-GEOIR</option>
+              </select>
               <br />
             </td>
           </tr>
-          <tr>
-            <td style="padding-top: 5px;">
-              <label for="variable" class="lbold12">Job Variable</label>
-	        <select style="width: 340px;" class="normal10" id="job_variable" name="job_variable" tabindex="5" onChange="setUnit(this)"></select>
+          <tr id="dataset_fortracc" style="display: none;">
+            <td nowrap style="white-space:nowrap; padding-top: 5px; padding-right: 10px;">
+              <label for="dataset" class="lbold12">Dataset</label>
+              <select style="width: 340px;" class="normal10" id="dataset" name="dataset" tabindex="4" onChange="buildJobVariableMenu(this)"></select>              
               <br />
             </td>
+          </tr>
+          <tr id="dataset_auxgeoir" style="display: none;">
+            <td nowrap style="white-space:nowrap; padding-top: 5px; padding-right: 10px;">
+              <label for="dataset" class="lbold12">Dataset</label>
+	            <input class="normal12" size="20" type="text" id="dataset" name="dataset" tabindex="4" value="GPM_MERGIR" placeholder="GPM_MERGIR" readonly />
+              <br />
+            </td>
+          </tr>
+          <tr id="job_variable_fortracc" style="display: none;">
+            <td style="padding-top: 5px;">
+              <label for="job_variable" class="lbold12">Job Variable</label>
+	            <select style="width: 340px;" class="normal10" id="job_variable" name="job_variable" tabindex="5" onChange="setUnit(this)"></select>
+              <br />
+            </td>
+          </tr>
+          <tr id="job_variable_auxgeoir" style="display: none;">
+            <td style="padding-top: 5px;">
+              <label for="job_variable" class="lbold12">Job Variable</label>
+	            <input class="normal12" size="20" type="text" id="job_variable" name="job_variable" tabindex="5" value="Tb" placeholder="Tb" readonly />
           </tr>
           <tr>
             <td>
-              <hr>
+              <br />
+              <hr />
+              <br />
             </td>
           </tr>
           <tr>
@@ -271,6 +316,11 @@ async function init()
               <br />
             </td>
           </tr>
+          <tr>
+            <td>
+              <br />
+            </td>
+          </tr>          
           <tr>
             <td nowrap style="padding-top: 5px;">
               <label for="startdate" class="lbold12">Start Date</label>
@@ -290,7 +340,13 @@ async function init()
               </div>
             </td>
           </tr>
-
+          <tr>
+            <td>
+              <br />              
+              <hr />
+              <br />              
+            </td>
+          </tr>
           <tr>
             <td class="normal10">
               <br />
@@ -305,12 +361,20 @@ async function init()
             </td>
           </tr>
           <tr>
+            <td>
+              <br />              
+              <hr />
+              <br />              
+            </td>
+          </tr>          
+          <tr>
             <td class="bold12">
               Inequality / Statistics
               <br />
             </td>
           </tr>
           <tr>
+            <tr id="ineq_fortracc" style="display: none;">
             <td style="padding-top: 5px;">
               <table>
                 <tr> 
@@ -318,30 +382,90 @@ async function init()
                     Type&nbsp;
                   </td>
                   <td width="350" class="normal10" nowrap>
-	            <select class="normal10" id="inequality_type" name="inequality_type" tabindex="9"  onChange="doInequalityChange(this)">
-	              <option value="lessThan">Less Than</option>
-	              <option value="lessThanOrEqualTo">Less Than or Equal To</option>
+                      <select class="normal10" id="inequality_fortracc_type" name="inequality_fortracc_type" tabindex="10"  onChange="doInequalityChange(this)">
+                      <option value="lessThan">Less Than</option>
+                      <option value="lessThanOrEqualTo">Less Than or Equal To</option>
+                      <option value="lessThan">Less Than</option>
+                      <option value="lessThanOrEqualTo">Less Than or Equal To</option>
                       <option value="greaterThan">Greater Than</option>
                       <option value="greaterThanOrEqualTo">Greater Than or Equal To</option>
                       <option value="equalTo">Equal To</option>
                       <option value="anomalyEvent">Standard Deviation</option>
                     </select>
                     <br />
+                    <br />
                   </td>
-                <tr> 
+                </tr> 
                 <tr>
-                  <td width="60" class="normal10" id="inequality_unit_title" style="text-align:right; vertical-align: top">
-	            Units&nbsp;
+                  <td width="60" class="normal10" id="inequality_unit_fortracc_title" style="text-align:right; vertical-align: top">
+	                Units&nbsp;
                   </td>
                   <td class="normal10">
-	            <input class="normal10" size="8" type="text" id="inequality_unit" name="inequality_unit" placeholder="" value='' tabindex="10" disabled />
-                    <label id="inequality_unit_label" for="inequality_unit" class="normal10">&nbsp;()</label>
+	                  <input class="normal10" size="8" type="text" id="inequality_fortracc_unit" name="inequality_fortracc_unit" placeholder="" value='' tabindex="11" disabled />
+                    <label id="inequality_unit_fortracc_label" for="inequality_fortracc_unit" class="normal10">&nbsp;()</label>
                     <br />
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
+          <tr id="ineq_auxgeoir" style="display: none;">
+            <td style="padding-top: 5px;">
+              <table>
+                <tr> 
+                  <td nowrap width="60" class="normal10" style="text-align: right; vertical-align: top">
+                    Type&nbsp;
+                  </td>
+                  <td width="350" class="normal10" nowrap>
+       	            <input class="normal12" size="15" type="text" id="inequality_auxgeoir_type" name="indequality_auxgeoir_type" tabindex="10" value="lessThan" placeholder="Less Than" readonly />
+                    <br />
+                    <br />
+                  </td>
+                <tr> 
+                <tr>
+                  <td width="60" class="normal10" id="inequality_unit_auxgeoir_title" style="text-align:right; vertical-align: top">
+	                Units&nbsp;
+                  </td>
+                  <td class="normal10">
+	                  <input class="normal10" size="8" type="text" id="inequality_auxgeoir_unit" name="inequality_auxgeoir_unit" placeholder="" value='' tabindex="11" />
+                    <label id="inequality_unit_auxgeoir_label" for="inequality_auxgeoir_unit" class="normal10">&nbsp;(K)</label>
+                    <br />
+                    <br />
+                  </td>
+                </tr>
+                <tr> 
+                  <td nowrap width="60" class="normal10" id="warmer_toggle_title" style="text-align: right; vertical-align: top">
+                    Warmer Toggle&nbsp;
+                  </td>
+                  <td width="350" class="normal10" nowrap>
+                    <select class="normal10" id="warmer_toggle" name="warmer_toggle" tabindex="10">
+                      <option value="on" SELECTED>On</option>
+                      <option value="off">Off</option>
+                    </select>
+                    <br />
+                    <br />
+                  </td>
+                </tr>
+                <tr>
+                  <td width="60" class="normal10" id="warmer_threshold_title" style="text-align:right; vertical-align: top">
+	                Warmer Threshold&nbsp;
+                  </td>
+                  <td class="normal10">
+	                  <input class="normal10" size="8" type="text" id="warmer_threshold" name="warmer_threshold" placeholder="" value='' tabindex="11" />
+                    <label id="warmer_threshold_label" for="warmer_threshold" class="normal10">&nbsp;(K)</label>
+                    <br />
+                  </td>
+                </tr>                                 
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <br />              
+              <hr />
+              <br />              
+            </td>
+          </tr>          
           <tr>
             <td class="bold12">
               Description
@@ -349,17 +473,18 @@ async function init()
           </tr>
           <tr>
             <td class="bold12">
-	      <textarea style="width: 350px;" class="normal10" id="description" name="description" tabindex="11" rows="4" cols="50" ></textarea>
+	      <textarea style="width: 350px;" class="normal10" id="description" name="description" tabindex="12" rows="4" cols="50" ></textarea>
             </td>
           </tr>
           <tr>
             <td style="text-align:center; padding-top: 5px;">
-              <input type="button" class="mbutton" tabindex="12" style="cursor:pointer" value="SUBMIT" onClick="doJobSubmit()"/>
+              <br />
+              <input type="button" class="mbutton" tabindex="13" style="cursor:pointer" value="SUBMIT" onClick="doJobSubmit()"/>
             </td>
           </tr>
         </table>
       </td>
-      <td class="right" style="vertical-align:top;">
+      <td class="right" style="vertical-align: middle;">
         <div id="map" style="height: 100%; z-index: 0;"></div>
       </td>
     </tr>

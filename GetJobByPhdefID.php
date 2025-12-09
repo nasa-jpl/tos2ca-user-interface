@@ -9,7 +9,7 @@
   jobIDValidate($jobID);
 
 
-  $sql = "select j.jobID, j.stage, j.phdefJobID, j.dataset, j.variable, j.startDate, j.endDate, j.ineqOperator, j.ineqValue, j.description, j.status, j.submitTime, ST_AsText(coords) from jobs j where j.phdefJobID = ?";
+  $sql = "select j.jobID, j.stage, j.phdefJobID, j.dataset, j.variable, j.startDate, j.endDate, j.ineqOperator, j.ineqValue, j.description, j.algorithm, j.warmerToggle, j.warmerValue, j.status, j.submitTime, ST_AsText(coords) from jobs j where j.phdefJobID = ?";
   $param = array('i', &$jobID);
   $result = getSQLResultP($sql, $param);
 

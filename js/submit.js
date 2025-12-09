@@ -22,14 +22,82 @@ async function doJobSubmit()
     return;
   }
 
-  var select = document.getElementById("dataset");
-  var dataset = select.options[select.selectedIndex].value;
+  var select = document.getElementById("algorithm");
+  var algorithm = select.options[select.selectedIndex].value;
 
-  var select = document.getElementById("job_variable");
-  var job_variable = select.options[select.selectedIndex].value;
+  if (algorithm === '') 
+  {
+    alert('Please select and algorithm.');
+    return;
+  }
 
-  var start = document.getElementById("startdate").value;
-  var end   = document.getElementById("enddate").value;
+  if (algorithm === 'fortracc')
+  {
+    var select = document.getElementById("dataset");
+    var dataset = select.options[select.selectedIndex].value;
+
+    var select = document.getElementById("job_variable");
+    var job_variable = select.options[select.selectedIndex].value;
+    
+    var select = document.getElementById("inequality_fortracc_type");
+    var type = select.value;
+
+    var unit = document.getElementById("inequality_fortracc_unit").value;
+    if (unit === '')
+    {
+      alert('Please enter an inequality value.');
+      return;
+    }
+
+    var warmer_toggle = 'NULL';
+    var warmer_threshold = 'NULL';
+
+  } else if (algorithm === 'auxgeoir')
+  {
+    var dataset = getTextValue("dataset");
+    var job_variable = getTextValue("job_variable");
+
+    var type = getTextValue("inequality_auxgeoir_type");
+
+    var unit = document.getElementById("inequality_auxgeoir_unit").value;
+    if (unit === '')
+    {
+      alert('Please enter an inequality value.');
+      return;
+    }
+
+    var select = document.getElementById("warmer_toggle");
+    var warmer_toggle = select.value;
+    if (warmer_toggle === '')
+    {
+      alert('Please select an option for "Warmer Toggle."');
+      return;
+    }
+
+
+    var warmer_threshold = document.getElementById("warmer_threshold").value;    
+    if (warmer_toggle === "on" && warmer_threshold === '')
+    {
+      alert('Please enter warmer threhold value.');
+      return;
+    }
+    if (warmer_toggle === "off")
+    {
+      var warmer_threshold = 'NULL';
+    }
+    if (algorithm != 'auxgeoir')
+    {
+      var warmer_toggle = 'NULL';
+      var warmer_threshold = 'NULL';
+    }
+
+  } else {
+    alert('No valid algorithm selected.');
+    return;
+  }
+
+  var startdate = document.getElementById("startdate").value;
+  var enddate   = document.getElementById("enddate").value;
 
   var spatial = document.getElementById("spatial").value;
 
@@ -45,19 +113,10 @@ async function doJobSubmit()
     return;
   }
 
-  var select = document.getElementById("inequality_type");
-  var type = select.value;
-
-  var unit = document.getElementById("inequality_unit").value;
-
-  if (unit === '')
-  {
-    alert('Please enter an inequality unit.');
-    return;
-  }
 
   var desc = document.getElementById("description").value;
-
+  if (desc === '')
+    desc = 'NULL';
   
   // GetUserID.php
   var url = `${approot}/GetUserID.php`;
@@ -77,25 +136,33 @@ async function doJobSubmit()
   var polygon = `POLYGON((${coords}))`;
   console.log(polygon);
 
-  start = `${start} 00:00:00`;
-  end = `${end} 23:59:59`;
+  start = `${startdate} 00:00:00`;
+  end = `${enddate} 23:59:59`;
 
   // for first stage now
   var stage = 'phdef';
   var qstatus = 'pending';
 
-
-  var url = `${approot}/JobInsert.php`;
+  var url = `${approot}/JobInsert.php?userID=${userId}&stage=${stage}&dataset=${dataset}&variable=${job_variable}&polygon=${polygon}&startDate=${start}&endDate=${end}&ineqOperator=${type}&ineqValue=${unit}&status=${qstatus}&desc=${desc}&algorithm=${algorithm}&warmerToggle=${warmer_toggle}&warmerThreshold=${warmer_threshold}`;
   console.log(`url = ${url}`);
 
-  var params = `${userId};${stage};${dataset};${job_variable};${polygon};${start};${end};${type};${unit};${qstatus}`;
+  let affected_rows = await fetch(url)
+    .then((response) => response.text())
+    .then((text) => {
+       return text;
+    });
+  console.log(`affected_rows = ${affected_rows}`);
 
+  if ((affected_rows-0) == 1)
+  {
+    alert(`SUCESSFUL: The job was submitted sucessfully`);
+  }
+  else
+  {
+    alert(`FAILED: The job submit was failed`);
+  }
 
-  // make desc separate to prevent desc has ';' which is the separater in JobInsert.php
-  var data = new FormData();
-  data.append( "params", params);
-  data.append( "desc", desc);
-
+  /*
   const response = await fetch(url, {
     method: 'POST',
     body: data
@@ -112,6 +179,7 @@ async function doJobSubmit()
   {
     alert(`FAILED: The job submit was failed`);
   }
+  */
 }
 
 
