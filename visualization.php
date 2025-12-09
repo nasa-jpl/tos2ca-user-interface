@@ -216,7 +216,13 @@
             </div>
           </div>
           <hr />
-          <div id="vis_controls-chart_opts" class="vis_controls-row-top">
+          <div id="vis_controls-chart_opts_hint" class="vis_controls-row-top">
+            Fetch a job to see available chart options.
+          </div>
+          <div id="vis_controls-chart_opts_climatology" class="vis_controls-row-top" style="display: none;">
+            Selected job will visualize all available parameters as a timeseries.
+          </div>
+          <div id="vis_controls-chart_opts" class="vis_controls-row-top" style="display: none;">
             <div class="vis_controls-column">
               <div class="vis_controls-row">
                 <div class="vis_labeled-select">

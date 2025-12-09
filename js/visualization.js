@@ -1157,6 +1157,9 @@ class JobUtil {
     $('#chart_variable_select_1').html('<option value="">None</option>');
     $('#chart_variable_select_2').html('<option value="">None</option>');
     $('#chart_variable_select_3').html('<option value="">None</option>');
+    $('#vis_controls-chart_opts_hint').css('display', '');
+    $('#vis_controls-chart_opts_climatology').css('display', 'none');
+    $('#vis_controls-chart_opts').css('display', 'none');
   }
 
   populateJobSummary(jobId, jobSumm) {
@@ -1294,10 +1297,13 @@ class JobUtil {
 
     // disable for climatology charts
     if (climatology) {
+      $('#vis_controls-chart_opts_climatology').css('display', '');
       $('#vis_controls-chart_opts').css('display', 'none');
     } else {
       $('#vis_controls-chart_opts').css('display', '');
+      $('#vis_controls-chart_opts_climatology').css('display', 'none');
     }
+    $('#vis_controls-chart_opts_hint').css('display', 'none');
 
     $('#chart_create_btn').attr('disabled', false);
   }
@@ -1688,10 +1694,17 @@ class ChartUtil {
         dataFrame: dfData,
         resolution: 'week',
         type: 'standard',
+        skip_step: 0,
       },
     } = options;
 
     const xAxis = 'datetime';
+
+    const {
+      resolution: clim_res,
+      type: clim_type,
+      skip_step: clim_skip,
+    } = climatology;
 
     const climData = this._dataUtil.getClimatology(climatology);
 
@@ -1777,11 +1790,15 @@ class ChartUtil {
       };
     };
 
+    let full_subtitle = `${subtitle} · Climatology: ${clim_type} · Resolution: ${clim_res}`;
+    if (clim_type === 'skip_step') {
+      full_subtitle = `${full_subtitle} · Skip: ${clim_skip}`;
+    }
     const chartOpts = {
       animation: false,
       title: {
         text: title,
-        subtext: subtitle,
+        subtext: full_subtitle,
         itemGap: 0,
       },
       tooltip: {
@@ -2052,18 +2069,7 @@ class ChartUtil {
             y: [`${v}_min`, `${v}_max`],
           },
         });
-        // acc.push({
-        //   type: 'candlestick',
-        //   blendMode: 'source-over',
-        //   large: true,
-        //   xAxisIndex: i,
-        //   yAxisIndex: i,
-        //   datasetIndex: 0,
-        //   encode: {
-        //     x: xAxis,
-        //     y: [`${v}_mean`, `${v}_max`, `${v}_min`, `${v}_max`],
-        //   },
-        // });
+
         return acc;
       }, []),
     };
@@ -2250,7 +2256,15 @@ class ChartUtil {
               [-]
           </div>
           <div style="flex: 1 1; display: flex; flex-flow: column; padding: 8px 0px;">
-              <div style="font-size: 16px; font-weight: bold; padding: 8px; 0px;">Adjust Chart Options</div>
+             <div style="display: flex; flex-flow: row nowrap; justify-content: space-between; align-items: center;">
+              <div style="font-size: 16px; font-weight: bold; padding: 8px;">Adjust Chart Options</div>
+              <div style="text-align: right;">
+                  <input type="button" value="Remove" onClick="_glob_chartUtil.removeChart('${chartId}')" />
+                  <input type="button" value="Reset" onClick="_glob_chartUtil.resetChart('${chartId}')" />
+                  <input type="button" value="Update" onClick="_glob_chartUtil.updateChart('${chartId}')" />
+              </div>
+            </div>
+            <div style="flex: 1 1; padding: 0px 0px 0px 8px; overflow: hidden; overflow-y: auto;">
               <div style="overflow: hidden; display: flex; flex-flow: column;">
                   <table id="${chartTableId}" class="display table-responsive cell-border" style="flex: 1 1;">
                       <thead>
@@ -2289,11 +2303,6 @@ class ChartUtil {
                       <input id="${chartStatsScatterScaleYExprId}" name="${chartStatsScatterScaleYExprId}" placeholder="_mean" style="flex: 1 1;" />
                   </div>
               </div>
-              <div style="flex-basis: 24px; height: 24px; text-align: right;">
-                  <input type="button" value="Remove" onClick="_glob_chartUtil.removeChart('${chartId}')" />
-                  <input type="button" value="Reset" onClick="_glob_chartUtil.resetChart('${chartId}')" />
-                  <input type="button" value="Update" onClick="_glob_chartUtil.updateChart('${chartId}')" />
-              </div>
           </div>
       </div>
     `;
@@ -2317,46 +2326,64 @@ class ChartUtil {
           </div>
           <div style="flex: 1 1; display: flex; flex-flow: column; padding: 8px 0px;">
               <div style="font-size: 16px; font-weight: bold; padding: 8px;">Adjust Chart Options</div>
-              <div style="flex: 1 1; padding: 8px;">
-              <div <div class="vis_labeled-select-small">
-                  <label for="${chartSelectDataPointBinSizeId}" class="lbold12" style="width: auto; flex: 1 1;">Data Point Binning</label>
-                  <select class="normal10 vis_btn" id="${chartSelectDataPointBinSizeId}" name="${chartSelectDataPointBinSizeId}" style="flex-basis: 30%; width: 30%;">
-                    <option selected value="day">None</option>
-                    <option value="day">Day</option>
-                    <option value="week">Week</option>
-                    <option value="month">Month</option>
-                    <option value="year">Year</option>
-                  </select>
-                </div>  
-              <div <div class="vis_labeled-select-small">
-                  <label for="${chartSelectClimBinSizeId}" class="lbold12" style="width: auto; flex: 1 1;">Climatology Bin Size</label>
-                  <select class="normal10 vis_btn" id="${chartSelectClimBinSizeId}" name="${chartSelectClimBinSizeId}" style="flex-basis: 30%; width: 30%;">
-                    <option value="day">Day</option>
-                    <option selected value="week">Week</option>
-                    <option value="month">Month</option>
-                    <option value="year">Year</option>
-                  </select>
-                </div>
-                <div <div class="vis_labeled-select-small">
-                  <label for="${chartSelectClimChunkTypeId}" class="lbold12" style="width: auto; flex: 1 1;">Climatology Bin Type</label>
-                  <select class="normal10 vis_btn" id="${chartSelectClimChunkTypeId}" name="${chartSelectClimChunkTypeId}" style="flex-basis: 30%; width: 30%;">
-                    <option selected value="standard">Standard</option>
-                    <option value="rolling">Rolling</option>
-                    <option value="skip_step">Skip Step</option>
-                  </select>
-                </div>
-                <div <div class="vis_labeled-select-small">
-                  <label for="${chartSelectClimSkipStepSizeId}" class="lbold12" style="width: auto; flex: 1 1;">Skip Size</label>
-                  <input id="${chartSelectClimSkipStepSizeId}" name="${chartSelectClimSkipStepSizeId}" style="flex-basis: 30%; width: 30%;" type="number" placeholder="0">
-                </div>
-              </div>
-              <div style="flex-basis: 24px; height: 24px; text-align: right;">
+            <div style="display: flex; flex-flow: row nowrap; justify-content: space-between; align-items: center;">
+              <div style="font-size: 16px; font-weight: bold; padding: 8px;">Adjust Chart Options</div>
+              <div style="text-align: right;">
                   <input type="button" value="Remove" onClick="_glob_chartUtil.removeChart('${chartId}')" />
                   <input type="button" value="Reset" onClick="_glob_chartUtil.resetChart('${chartId}')" />
                   <input type="button" value="Update" onClick="_glob_chartUtil.updateChart('${chartId}')" />
               </div>
-          </div>
-      </div>
+            </div>
+            <div style="flex: 1 1; padding: 0px 0px 0px 8px; overflow: hidden; overflow-y: auto;">
+              <div class="vis_labeled-select-small">
+                <label for="${chartSelectDataPointBinSizeId}" class="lbold12" style="width: auto; flex: 1 1;">Data Point Binning</label>
+                <select class="normal10 vis_btn" id="${chartSelectDataPointBinSizeId}" name="${chartSelectDataPointBinSizeId}" style="flex-basis: 30%; width: 30%;">
+                  <option selected value="day">None</option>
+                  <option value="day">Day</option>
+                  <option value="week">Week</option>
+                  <option value="month">Month</option>
+                  <option value="year">Year</option>
+                </select>
+              </div>  
+              <div class="vis_labeled-select-small">
+                <label for="${chartSelectClimBinSizeId}" class="lbold12" style="width: auto; flex: 1 1;">Climatology Bin Size</label>
+                <select class="normal10 vis_btn" id="${chartSelectClimBinSizeId}" name="${chartSelectClimBinSizeId}" style="flex-basis: 30%; width: 30%;">
+                  <option value="day">Day</option>
+                  <option selected value="week">Week</option>
+                  <option value="month">Month</option>
+                  <option value="year">Year</option>
+                </select>
+              </div>
+              <div class="vis_labeled-select-small">
+                <label for="${chartSelectClimChunkTypeId}" class="lbold12" style="width: auto; flex: 1 1;">Climatology Bin Type</label>
+                <select class="normal10 vis_btn" id="${chartSelectClimChunkTypeId}" name="${chartSelectClimChunkTypeId}" style="flex-basis: 30%; width: 30%;">
+                  <option selected value="standard">Standard</option>
+                  <option value="rolling">Rolling</option>
+                  <option value="skip_step">Skip Step</option>
+                </select>
+              </div>
+              <div class="vis_labeled-select-small">
+                <label for="${chartSelectClimSkipStepSizeId}" class="lbold12" style="width: auto; flex: 1 1;">Skip Size</label>
+                <input id="${chartSelectClimSkipStepSizeId}" name="${chartSelectClimSkipStepSizeId}" style="flex-basis: 30%; width: 30%;" type="number" placeholder="0">
+              </div>
+              <div class="vis_timeseries_info">
+                The timeseries plots visualize the following values:
+                <ol style="list-style: auto; padding: revert;">
+                  <li>Bin Size Mean (aggregated from the sub-daily mean values)</li>
+                  <li>Bin Size Max (max value from the sub-daily max values)</li>
+                  <li>Bin Size Min (min value from the sub-daily min values)</li>
+                  <li>Climatology mean (mean of the means in the climatology bin)</li>
+                  <li>Climatology std dev (std dev of the means in the climatology bin)</li>
+                </ol>
+                These values are represented by:
+                <ul style="list-style: auto; padding: revert;">
+                  <li>A colored circle for the mean (1)</li>
+                  <li>A black vertical bar spanning the min (3) and the max (4) values</li>
+                  <li>A grey area spanning the climatology mean (4) +/- the climatology std dev (5)</li>
+                </ul>
+              </div>
+            </div>
+        </div>
     `;
   }
 
