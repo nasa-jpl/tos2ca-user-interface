@@ -219,6 +219,10 @@ function init()
                         <td id="phDateRange" class="normal12" style="text-align: left; padding-left: 5px; padding-top: 5px;"></td>
                       </tr>
                       <tr>
+                        <td class="bold12" style="width:150px; text-align: right; padding-top: 5px;">Algorithm:</td>
+                        <td id="phAlgorithm" class="normal12" style="padding-left: 5px; padding-bottom: 5px;"></td>
+                      </tr>                      
+                      <tr>
                         <td class="bold12" style="width:150px; text-align: right; padding-top: 5px;">Data Set:</td>
                         <td id="phDataSet" class="normal12" style="text-align: left; padding-left: 5px;  padding-top: 5px;"></td>
                       </tr>
@@ -234,6 +238,14 @@ function init()
                         <td class="bold12" style="width:150px; text-align: right; padding-top: 5px;">Inequality Value:</td>
                         <td id="phInequalityValue" class="normal12" style="text-align: left; padding-left: 5px;  padding-top: 5px;"></td>
                       </tr>
+                      <tr>
+                        <td class="bold12" style="width:150px; text-align: right; padding-top: 5px;">Warmer Toggle:</td>
+                        <td id="phWarmerToggle" class="normal12" style="padding-left: 5px;  padding-top: 5px;"></td>
+                      </tr>
+                      <tr>
+                        <td class="bold12" style="width:150px; text-align: right; padding-top: 5px;">Warmer Value:</td>
+                        <td id="phWarmerValue" class="normal12" style="padding-left: 5px;  padding-top: 5px;"></td>
+                      </tr>                        
                       <tr>
                         <td class="bold12" style="width:150px; text-align: right; padding-top: 5px;">Description:</td>
                         <td id="phDescription" class="normal12" style="text-align: left; padding-left: 5px;  padding-top: 5px;"></td>

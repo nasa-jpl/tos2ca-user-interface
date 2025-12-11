@@ -16,7 +16,7 @@ async function doJobLookup()
   dataTable.rows.add([]);
   dataTable.draw();
 
-  setWait('pwait', 'block', 'doLookup()')
+  setWait('qwait', 'block', 'doLookup()')
   if (jobID)
   {
     let job = await getCurationJob(jobID); //phdef or curation job
@@ -34,12 +34,12 @@ async function doJobLookup()
   {
     if (email)
     {
-      await showJobByEmail(email).then(() => setWait('pwait', 'none', 'doLookup(email)'));
+      await showJobByEmail(email).then(() => setWait('qwait', 'none', 'doLookup(email)'));
     }
     else if (firstname && lastname)
     {
-      setWait('pwait', 'block', 'doLookup(name)')
-      await showJobByName(firstname, lastname).then(() => setWait('pwait', 'none', 'doLookup(name)'));
+      setWait('qwait', 'block', 'doLookup(name)')
+      await showJobByName(firstname, lastname).then(() => setWait('qwait', 'none', 'doLookup(name)'));
     }
     else
     {
@@ -47,7 +47,7 @@ async function doJobLookup()
       return '';
     }
   }
-  setWait('pwait', 'none', 'doLookup()')
+  setWait('qwait', 'none', 'doLookup()')
 }
 
 async function showJobByEmail(email)
@@ -167,8 +167,10 @@ async function showJobInfo(job)
 
   setInnerHTML('phJobID', job.jobID); 
   setInnerHTML('phStage', job.stage); 
+  setInnerHTML('phAlgorithm', job.algorithm);
   setInnerHTML('phDataSet', job.dataset); 
   setInnerHTML('phVariable', job.variable); 
+  setInnerHTML('phAlgorithm', job.algorithm);
   setInnerHTML('phDescription', job.description); 
 
   let curationJobs = [];
@@ -180,12 +182,16 @@ async function showJobInfo(job)
     if (job.ineqOperator)
     {
       setInnerHTML('phInequality', job.ineqOperator); 
-      setInnerHTML('phInequalityValue', job.ineqValue); 
+      setInnerHTML('phInequalityValue', job.ineqValue);
+      setInnerHTML('phWarmerToggle', job.warmerToggle);
+      setInnerHTML('phWarmerValue', job.warmerValue); 
     }
     else
     {
       setInnerHTML('phInequality', job.ineqOperator); 
       setInnerHTML('phInequalityValue', job.ineqValue); 
+      setInnerHTML('phWarmerToggle', job.warmerToggle);
+      setInnerHTML('phWarmerValue', job.warmerValue);
     }
 
     if (job.startDate && job.endDate)
@@ -224,11 +230,15 @@ async function showJobInfo(job)
       {
         setInnerHTML('phInequality', job.ineqOperator); 
         setInnerHTML('phInequalityValue', job.ineqValue); 
+        setInnerHTML('phWarmerToggle', job.warmerToggle);
+        setInnerHTML('phWarmerValue', job.warmerValue);         
       }
       else
       {
         setInnerHTML('phInequality', phdefJob.ineqOperator); 
         setInnerHTML('phInequalityValue', phdefJob.ineqValue); 
+        setInnerHTML('phWarmerToggle', job.warmerToggle);
+        setInnerHTML('phWarmerValue', job.warmerValue);         
       }
 
       let dateStr = '';
@@ -265,6 +275,7 @@ async function showCurationJobInfo(job)
 
   setInnerHTML('phJobID', job.jobID); 
   setInnerHTML('phStage', job.stage); 
+  setInnerHTML('phAlgorithm', job.algorithm);
   setInnerHTML('phDataSet', job.dataset); 
   setInnerHTML('phVariable', job.variable); 
 
@@ -279,11 +290,15 @@ async function showCurationJobInfo(job)
     {
       setInnerHTML('phInequality', job.ineqOperator); 
       setInnerHTML('phInequalityValue', job.ineqValue); 
+      setInnerHTML('phWarmerToggle', job.warmerToggle);
+      setInnerHTML('phWarmerValue', job.warmerValue);       
     }
     else
     {
       setInnerHTML('phInequality', phdefJob.ineqOperator); 
       setInnerHTML('phInequalityValue', phdefJob.ineqValue); 
+      setInnerHTML('phWarmerToggle', job.warmerToggle);
+      setInnerHTML('phWarmerValue', job.warmerValue);       
     }
 
     let dateStr = '';
@@ -307,10 +322,13 @@ async function showPhDefJobInfo(job)
 
   setInnerHTML('phJobID', job.jobID); 
   setInnerHTML('phStage', job.stage); 
+  setInnerHTML('phAlgorithm', job.algorithm);
   setInnerHTML('phDataSet', job.dataset); 
   setInnerHTML('phVariable', job.variable); 
   setInnerHTML('phInequality', job.ineqOperator); 
   setInnerHTML('phInequalityValue', job.ineqValue); 
+  setInnerHTML('phWarmerToggle', job.warmerToggle);
+  setInnerHTML('phWarmerValue', job.warmerValue);   
   setInnerHTML('phDescription', job.description); 
 
   let dateStr = `${job.startDate} to ${job.endDate}`;
@@ -342,10 +360,13 @@ function clearJobDisplay()
 {
   setInnerHTML('phJobID', ''); 
   setInnerHTML('phStage', ''); 
+  setInnerHTML('phAlgorithm', '');
   setInnerHTML('phDataSet', ''); 
   setInnerHTML('phVariable', ''); 
   setInnerHTML('phInequality', ''); 
   setInnerHTML('phInequalityValue', ''); 
+  setInnerHTML('phWarmerToggle', '');
+  setInnerHTML('phWarmerValue', '');
   setInnerHTML('phDescription', ''); 
   setInnerHTML('phDateRange', ''); 
   setInnerHTML('phCurationJobs', ''); 

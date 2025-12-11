@@ -27,11 +27,36 @@ class MiscUtil {
     return Number(Math.round(num + 'e' + prec) + 'e-' + prec);
   }
 
-  static parseDate(dateStr, hrSep = ' ') {
-    dateStr = `${dateStr}`.split('.')[0]; // handle date passed as integer/float
-    const orig = dateStr;
+  static parseDate(inputDate, hrSep = ' ') {
+    const orig = inputDate;
+    const dateStr = `${inputDate}`.split('.')[0]; // handle date passed as integer/float
 
-    if (dateStr.match(/^[0-9]+$/) != null) {
+    if (dateStr.match(/^[0-9]{13}$/)) {
+      // milliseconds since epoch
+      const mDate = moment(parseFloat(orig));
+      const date = mDate.toDate();
+      const intDate = parseInt(mDate.format('YYYYMMDDHHmm'));
+      const strDate = mDate.format(`YYYY-MM-DD${hrSep}HH:mm`);
+      return {
+        str: strDate,
+        date,
+        intDate,
+        orig,
+      };
+    } else if (dateStr.match(/^[0-9]{10}$/) != null) {
+      // seconds since epoch
+      const mDate = moment(parseFloat(orig) * 1000);
+      const date = mDate.toDate();
+      const intDate = parseInt(mDate.format('YYYYMMDDHHmm'));
+      const strDate = mDate.format(`YYYY-MM-DD${hrSep}HH:mm`);
+      return {
+        str: strDate,
+        date,
+        intDate,
+        orig,
+      };
+    } else if (dateStr.match(/^[0-9]{12}$/) != null) {
+      // YYYYMMDDHHMM
       const year = dateStr.substring(0, 4);
       const month = dateStr.substring(4, 6);
       const day = dateStr.substring(6, 8);
@@ -47,16 +72,25 @@ class MiscUtil {
         orig,
       };
     } else if (
-      dateStr.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}$/)
+      dateStr.match(
+        /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}(:[0-9]{2})?$/
+      )
     ) {
+      // YYYY-MM-DD HH:mm:ss
       const {
-        groups: { year, month, day, hr, min },
+        groups: { year, month, day, hr, min, sec = '00' },
       } =
-        /^(?<year>[0-9]{4})-(?<month>[0-9]{2})-(?<day>[0-9]{2}) (?<hr>[0-9]{2}):(?<min>[0-9]{2})$/.exec(
+        /^(?<year>[0-9]{4})-(?<month>[0-9]{2})-(?<day>[0-9]{2}) (?<hr>[0-9]{2}):(?<min>[0-9]{2})(:(?<sec>[0-9]{2}))?$/.exec(
           dateStr
         );
 
-      const date = new Date(year, month - 1, day, hr, min);
+      const date = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hr),
+        parseInt(min)
+      );
       const intDate = parseInt(`${year}${month}${day}${hr}${min}`);
       return { str: dateStr, date, intDate, orig };
     }
@@ -199,99 +233,196 @@ class DataUtil {
   }
 
   async getData(options = {}) {
+    console.time('Get data');
     let {
       anomalies,
       times,
       area,
       files,
       jobId,
-      baseUrl = 'https://tos2ca-dev1.jpl.nasa.gov/getVizData/',
+      isClimatologyChart = false,
+      baseUrl = 'https://yourwebsite.com/getVizData/',
+      dataBinRes = 'none',
     } = options;
 
-    // build query from options
-    const queryArr = [];
-
-    if (files) {
-      files = Array.isArray(files) ? files : [files];
-      queryArr.push(`files=${files.join(',')}`);
-    } else {
-      console.warn('No files specified');
-      return null;
-    }
-
-    if (area) {
-      if (Array.isArray(area) && area.length === 4) {
-        queryArr.push(`area=${area.join(',')}`);
-      } else {
-        console.warn('Bad area', area);
-      }
-    }
-
-    if (times) {
-      times = Array.isArray(times) ? times : [times];
-      queryArr.push(`times=${times.join(',')}`);
-    }
-
-    if (anomalies) {
-      anomalies = Array.isArray(anomalies) ? anomalies : [anomalies];
-      queryArr.push(`ids=${anomalies.join(',')}`);
-    }
-
-    const url = `${baseUrl}?${queryArr.join('&')}`;
-
-    // check if this query is cached
-    let data = this._datastore.get(url);
-
-    if (!data) {
-      try {
-        data = await fetch(url).then((res) => {
-          if (res.status >= 400) {
-            throw new Error('failed to fetch');
-          }
-          return res.json();
+    if (isClimatologyChart) {
+      const cacheKey = `climatology_${jobId}`;
+      let data = this._datastore.get(cacheKey);
+      if (!data) {
+        console.time('Fetch data');
+        const appRoot = MiscUtil.getURI();
+        const promArr = files.map((f) => {
+          return fetch(`${appRoot}/GetJsonByKey.php?key=${f}`).then((res) => {
+            if (res.status >= 400) {
+              console.timeEnd('Get data');
+              throw new Error('failed to fetch');
+            }
+            return res.json();
+          });
         });
+        const dataCollection = await Promise.all(promArr);
+        console.timeEnd('Fetch data');
+        data = this.reshapeData(dataCollection);
+        data = this.processData(data, { dataBinRes });
 
-        data = this.processData(data);
         data.subtitle = `Mask Job: ${jobId}`; // poke in job id for subtitle
 
         if (data) {
-          this._datastore.add(url, data);
+          this._datastore.add(cacheKey, data);
         }
-      } catch (err) {
-        console.log(err);
+      }
+
+      console.timeEnd('Get data');
+      console.log('fetched data', data);
+      return data;
+    } else {
+      // build query from options
+      const queryArr = [];
+
+      if (files) {
+        files = Array.isArray(files) ? files : [files];
+        queryArr.push(`files=${files.join(',')}`);
+      } else {
+        console.warn('No files specified');
+        console.timeEnd('Get data');
         return null;
       }
-    }
 
-    console.log('fetched data', data);
-    return data;
+      if (area) {
+        if (Array.isArray(area) && area.length === 4) {
+          queryArr.push(`area=${area.join(',')}`);
+        } else {
+          console.warn('Bad area', area);
+        }
+      }
+
+      if (times) {
+        times = Array.isArray(times) ? times : [times];
+        queryArr.push(`times=${times.join(',')}`);
+      }
+
+      if (anomalies) {
+        anomalies = Array.isArray(anomalies) ? anomalies : [anomalies];
+        queryArr.push(`ids=${anomalies.join(',')}`);
+      }
+
+      const url = `${baseUrl}?${queryArr.join('&')}`;
+
+      // check if this query is cached
+      let data = this._datastore.get(url);
+
+      if (!data) {
+        try {
+          console.time('Fetch data');
+          data = await fetch(url).then((res) => {
+            if (res.status >= 400) {
+              throw new Error('failed to fetch');
+            }
+            return res.json();
+          });
+
+          console.timeEnd('Fetch data');
+          if (data.error) {
+            console.log('Chart error', data);
+            console.timeEnd('Get data');
+            return null;
+          }
+
+          data = this.processData(data, { dataBinRes });
+          data.subtitle = `Mask Job: ${jobId}`; // poke in job id for subtitle
+
+          if (data) {
+            this._datastore.add(url, data);
+          }
+        } catch (err) {
+          console.log(err);
+          console.timeEnd('Get data');
+          return null;
+        }
+      }
+
+      console.log('fetched data', data);
+      console.timeEnd('Get data');
+      return data;
+    }
   }
 
-  processData(dataPkg) {
+  reshapeData(dataCollection) {
+    console.time('Reshape data');
+    const rep = dataCollection[0];
+    const { variables: variableList, units: unitsList } = rep;
+    const { columns } = rep.data;
+
+    const axisLabels = variableList.map((v, i) => {
+      return `${v} (${unitsList[i]})`;
+    });
+
+    const rows = dataCollection.reduce((acc, dataset) => {
+      return acc.concat(dataset.data.rows);
+    }, []);
+
+    console.timeEnd('Reshape data');
+    return {
+      title: variableList.join(' x '),
+      axis_labels: axisLabels,
+      var_list: variableList,
+      data: {
+        rows,
+        columns,
+      },
+    };
+  }
+
+  processData(dataPkg, opts = {}) {
+    console.time('Process data');
+    const { dataBinRes = 'none' } = opts;
     try {
-      let dfStats = new dfd.DataFrame(dataPkg.stats.rows, {
-        columns: dataPkg.stats.columns,
+      let dfData = new dfd.DataFrame(dataPkg.data.rows, {
+        columns: dataPkg.data.columns,
       });
 
+      // TODO - do better filtering so we don't drop rows with only some NaN
+      dfData.dropNa({ axis: 1, inplace: true });
+
       // convert datetime to UTC timestamp
-      dfStats = dfStats.apply(
+      console.time('Parse timestamp');
+      dfData = dfData.apply(
         (row) => {
           row[0] = MiscUtil.parseDate(row[0]).date.getTime();
           return row;
         },
         { axis: 1 }
       );
+      console.timeEnd('Parse timestamp');
 
       // process data
       let minDate = Number.POSITIVE_INFINITY;
       let maxDate = Number.NEGATIVE_INFINITY;
 
       // extract columns indexes
-      const cols = dfStats.columns;
-      const dateInd = cols.indexOf('datetime');
-      const anomIdInd = cols.indexOf('anom_id');
+      let cols = dfData.columns;
+      let dateInd = cols.indexOf('datetime');
+      let anomIdInd = cols.indexOf('anom_id');
 
-      const anomalyMetadata = dfStats.values.reduce((acc, ent) => {
+      // need to add bogus anomaly ID column
+      if (anomIdInd === -1) {
+        console.time('Add anom ID column');
+        const anomIDArr = new Array(dfData.values.length).fill(1);
+        dfData.addColumn('anom_id', anomIDArr, { inplace: true });
+
+        cols = dfData.columns;
+        dateInd = cols.indexOf('datetime');
+        anomIdInd = cols.indexOf('anom_id');
+        console.timeEnd('Add anom ID column');
+      }
+
+      // rebin the data
+      console.log(dataBinRes);
+      if (dataBinRes !== 'none') {
+        dfData = this.rebinData(dfData, dataBinRes);
+      }
+
+      const anomalyMetadata = dfData.values.reduce((acc, ent) => {
         const date = ent[dateInd];
         const anomalyId = ent[anomIdInd];
 
@@ -319,11 +450,13 @@ class DataUtil {
         .map((x) => parseInt(x))
         .sort((a, b) => a - b);
 
+      console.timeEnd('Process data');
+
       return {
         title: dataPkg.title,
         axisLabels: dataPkg.axis_labels,
         varList: dataPkg.var_list,
-        stats: dfStats,
+        data: dfData,
         anomIds,
         anomalyMetadata,
         minDate,
@@ -331,11 +464,117 @@ class DataUtil {
       };
     } catch (err) {
       console.warn(err);
+      console.timeEnd('Process data');
       return false;
     }
   }
 
+  rebinData(df, resolution = 'day') {
+    console.time('Rebin Data');
+    // prep trackers
+    const resRef = moment.duration(1, resolution).asMilliseconds();
+    const start = df['datetime'].min();
+    let inc = start;
+    let ind = 0;
+    let chunkDataFrames = [];
+    let currStartInd = ind;
+    let step = inc;
+
+    // manipulate starting inc to the start of the window
+    inc = moment.utc(inc).startOf(resolution);
+
+    console.time('splitting');
+    // separate out all of the chunks
+    while (ind < df.values.length) {
+      // step = moment(df.at(ind, 'datetime'));
+      // const stepDur = step.diff(inc);
+      step = df.at(ind, 'datetime');
+      const stepDur = step - inc;
+      if (stepDur >= resRef) {
+        // collect the current chunk and add it to the tracker
+        const rowInd =
+          currStartInd === ind ? currStartInd : `${currStartInd}:${ind}`;
+        chunkDataFrames.push(df.iloc({ rows: [rowInd] }));
+
+        // increment index trackers
+        currStartInd = ind;
+        inc = step;
+      }
+
+      ++ind;
+    }
+    console.timeEnd('splitting');
+
+    // collect the final chunk and add it to the tracker
+    const rowInd =
+      currStartInd === ind ? currStartInd : `${currStartInd}:${ind}`;
+    chunkDataFrames.push(df.iloc({ rows: [rowInd] }));
+
+    // get columns to drop for each stat
+    const minDCols = df.columns.filter((x) => x.indexOf('_min') === -1);
+    const maxDCols = df.columns.filter((x) => x.indexOf('_max') === -1);
+    const meanDCols = df.columns.filter((x) => x.indexOf('_mean') === -1);
+    // const stdDevDCols = df.columns.filter((x) => x.indexOf('_std_dev') === -1);
+
+    // calculate stats for each chunk and spread across each step in the data
+    console.time('squashing');
+    let dataColumns = [];
+    const dataRows = chunkDataFrames.map((c, i) => {
+      // break up the chunk data frame into min, max, mean, std_dev frames for aggregation
+      const minDf = c.drop({ columns: minDCols, inplace: false });
+      const maxDf = c.drop({ columns: maxDCols, inplace: false });
+      const meanDf = c.drop({ columns: meanDCols, inplace: false });
+      // const stdDevDf = c.drop({ columns: stdDevDCols, inplace: false });
+
+      // calculate stats
+      const minSeries = minDf.min({ axis: 0 });
+      const maxSeries = maxDf.max({ axis: 0 });
+      const meanSeries = meanDf.mean({ axis: 0 });
+      // const stdDevSeries = stdDevDf.mean({ axis: 0 }); // TODO - is this right?
+
+      // stack the aggregate series together
+      const cDate = c.at(c.index[0], 'datetime');
+      const chunkTime = moment
+        .utc(cDate)
+        .startOf(resolution)
+        .toDate()
+        .getTime();
+      const anomId = c.at(c.index[0], 'anom_id');
+      if (dataColumns.length === 0) {
+        dataColumns = [
+          'datetime',
+          'anom_id',
+          ...minSeries.index,
+          ...maxSeries.index,
+          ...meanSeries.index,
+          // ...stdDevSeries.index,
+        ];
+      }
+      return [
+        chunkTime,
+        anomId,
+        ...minSeries.values,
+        ...maxSeries.values,
+        ...meanSeries.values,
+        // ...stdDevSeries.values,
+      ];
+    });
+    console.timeEnd('squashing');
+
+    // stack all the chunks together then resort by datetime
+    console.time('stacking');
+    const newDf = new dfd.DataFrame(dataRows, { columns: dataColumns });
+    newDf.sortValues('datetime', { inplace: true });
+    console.timeEnd('stacking');
+
+    console.timeEnd('Rebin Data');
+
+    return newDf;
+  }
+
   applyExprToDataFrame(options) {
+    console.time('Apply Expr to Frame');
+
     // sample: 2 * {x} + 0.75 * {y}
     const { dataFrame, axisMap } = options;
     let { expr } = options; // need to clean expression for evaluation
@@ -440,7 +679,267 @@ class DataUtil {
     // no op strings or numbers found, its a variable string
     const { varStr } = /{(?<varStr>[a-z_]+)}/gi.exec(expr).groups;
     const colName = axisMap[varStr] || varStr;
+
+    console.timeEnd('Apply Expr to Frame');
+
     return dataFrame[colName];
+  }
+
+  getClimatology(opts) {
+    console.time('generate climatology');
+
+    const {
+      dataFrame,
+      resolution = 'month',
+      type = 'standard',
+      skip_step = 0,
+    } = opts;
+
+    // duplicate dataframe
+    const df = dataFrame.copy();
+    df.resetIndex({ inplace: true });
+
+    const start = df['datetime'].min();
+    const end = df['datetime'].max();
+
+    // trim columns that aren't datetime and means
+    const dCols = df.columns.filter(
+      (x) => x !== 'datetime' && x.indexOf('mean') === -1
+    );
+    df.drop({ columns: dCols, inplace: true });
+
+    let climDf;
+    let inc = start;
+    let ind = 0;
+
+    if (type === 'rolling') {
+      while (inc <= end) {
+        // step back one resolution from current index
+        const step = moment(df.at(ind, 'datetime')).subtract(1, resolution);
+        const stepTime = step.toDate().getTime();
+
+        // filter to the current step
+        const filtDf = df.query(
+          df['datetime'].le(inc).and(df['datetime'].gt(stepTime))
+        );
+
+        // calculate mean of means and std dev of means
+        const meanSeries = filtDf.mean({ axis: 0 });
+        const stdDevSeries = filtDf.std({ axis: 0 });
+        const meanMinusSeries = meanSeries.sub(stdDevSeries);
+        const stdDevDoubleSeries = stdDevSeries.mul(2);
+
+        // build new dataframe
+        const vals = [
+          ...meanSeries.values.slice(1),
+          ...stdDevSeries.values.slice(1),
+          ...meanMinusSeries.values.slice(1),
+          ...stdDevDoubleSeries.values.slice(1),
+        ];
+        const stepMeanDf = new dfd.DataFrame([[inc, ...vals]], {
+          columns: meanSeries.index
+            .concat(
+              meanSeries.index
+                .slice(1)
+                .map((x) => x.replace('_mean', '_mean_std_dev'))
+            )
+            .concat(
+              meanSeries.index
+                .slice(1)
+                .map((x) => x.replace('_mean', '_mean_minus_std_dev'))
+            )
+            .concat(
+              meanSeries.index
+                .slice(1)
+                .map((x) => x.replace('_mean', '_double_std_dev'))
+            ),
+        });
+
+        // add to the climatology data frame
+        if (climDf) {
+          climDf = climDf.append(stepMeanDf, [ind]);
+        } else {
+          climDf = stepMeanDf;
+        }
+
+        // increment step
+        ind++;
+        if (ind >= df.values.length) {
+          break;
+        }
+        inc = df.at(ind, 'datetime');
+      }
+    } else if (type === 'skip_step') {
+      // Skip-Step allows you to create a climatology based on cadence.
+      // For example, to create a climatology for each month you could use
+      // a resolution of 'month' and a skip count of '11' which would give you
+      // a climatology with 12 values, one for each month of the year
+
+      // prep trackers
+      const resRef = moment.duration(1, resolution).asMilliseconds();
+      let chunkDataFrames = [];
+      let currStartInd = ind;
+      let step = inc;
+      let chunkInd = 0;
+
+      // manipulate starting inc to the start of the window
+      inc = moment.utc(inc).startOf(resolution);
+
+      // separate out all of the chunks
+      while (ind < df.values.length) {
+        step = moment(df.at(ind, 'datetime'));
+        const stepDur = step.diff(inc);
+        if (stepDur >= resRef) {
+          // collect the current chunk and add it to the tracker
+          const chunk = df.iloc({ rows: [`${currStartInd}:${ind}`] });
+          if (chunkDataFrames.length <= chunkInd) {
+            chunkDataFrames.push(chunk);
+          } else {
+            chunkDataFrames[chunkInd] = dfd.concat({
+              dfList: [chunkDataFrames[chunkInd], chunk],
+              axis: 0,
+            });
+          }
+
+          // increment index trackers
+          currStartInd = ind;
+          inc = step;
+          ++chunkInd;
+          if (chunkInd > skip_step) {
+            chunkInd = 0;
+          }
+        }
+
+        ++ind;
+      }
+
+      // collect the final chunk and add it to the tracker
+      const chunk = df.iloc({ rows: [`${currStartInd}:${ind}`] });
+      if (chunkDataFrames.length <= chunkInd) {
+        chunkDataFrames.push(chunk);
+      } else {
+        chunkDataFrames[chunkInd] = dfd.concat({
+          dfList: [chunkDataFrames[chunkInd], chunk],
+          axis: 0,
+        });
+      }
+
+      // calculate stats for each chunk and spread across each step in the data
+      chunkDataFrames = chunkDataFrames.map((chunk) => {
+        const meanSeries = chunk.mean({ axis: 0 });
+        const stdDevSeries = chunk.std({ axis: 0 });
+        const meanMinusSeries = meanSeries.sub(stdDevSeries);
+        const stdDevDoubleSeries = stdDevSeries.mul(2);
+
+        // create filled frames
+        const meanDfColumns = meanSeries.index
+          .slice(1)
+          .concat(
+            meanSeries.index
+              .slice(1)
+              .map((x) => x.replace('_mean', '_mean_std_dev'))
+          )
+          .concat(
+            meanSeries.index
+              .slice(1)
+              .map((x) => x.replace('_mean', '_mean_minus_std_dev'))
+          )
+          .concat(
+            meanSeries.index
+              .slice(1)
+              .map((x) => x.replace('_mean', '_double_std_dev'))
+          );
+        const meanDfRow = [
+          ...meanSeries.values.slice(1),
+          ...stdDevSeries.values.slice(1),
+          ...meanMinusSeries.values.slice(1),
+          ...stdDevDoubleSeries.values.slice(1),
+        ];
+        const meanDfRows = [];
+        for (let i = 0; i < chunk.values.length; ++i) {
+          meanDfRows.push(meanDfRow);
+        }
+        const meanDf = new dfd.DataFrame(meanDfRows, {
+          columns: meanDfColumns,
+        });
+
+        // drop all columns except for datetime
+        const chunkDCols = df.columns.filter((x) => x !== 'datetime');
+        chunk.drop({ columns: chunkDCols, inplace: true });
+
+        // restack the frame together
+        return dfd.concat({ dfList: [chunk, meanDf], axis: 1 });
+      });
+
+      // stack all the chunks together then resort by datetime
+      climDf = dfd.concat({ dfList: chunkDataFrames, axis: 0 });
+      climDf.sortValues('datetime', { inplace: true });
+    } else {
+      const step = moment(inc);
+      while (inc < end) {
+        // step one resolution forward from previous bin
+        step.add(1, resolution);
+
+        // filter to the current step
+        const filtDf = df.query(
+          df['datetime'].ge(inc).and(df['datetime'].lt(step.toDate().getTime()))
+        );
+
+        // calculate mean of means and std dev of means
+        const meanSeries = filtDf.mean({ axis: 0 });
+        const stdDevSeries = filtDf.std({ axis: 0 });
+        const meanMinusSeries = meanSeries.sub(stdDevSeries);
+        const stdDevDoubleSeries = stdDevSeries.mul(2);
+
+        // build new dataframe
+        const vals = [
+          ...meanSeries.values.slice(1),
+          ...stdDevSeries.values.slice(1),
+          ...meanMinusSeries.values.slice(1),
+          ...stdDevDoubleSeries.values.slice(1),
+        ];
+        const stepMeanDf = new dfd.DataFrame(
+          [
+            [filtDf['datetime'].min(), ...vals],
+            [filtDf['datetime'].max(), ...vals],
+          ],
+          {
+            columns: meanSeries.index
+              .concat(
+                meanSeries.index
+                  .slice(1)
+                  .map((x) => x.replace('_mean', '_mean_std_dev'))
+              )
+              .concat(
+                meanSeries.index
+                  .slice(1)
+                  .map((x) => x.replace('_mean', '_mean_minus_std_dev'))
+              )
+              .concat(
+                meanSeries.index
+                  .slice(1)
+                  .map((x) => x.replace('_mean', '_double_std_dev'))
+              ),
+          }
+        );
+
+        // add to the climatology data frame
+        if (climDf) {
+          climDf = climDf.append(stepMeanDf, [ind * 2, ind * 2 + 1]);
+        } else {
+          climDf = stepMeanDf;
+        }
+
+        // increment step
+        inc = step.toDate().getTime();
+        ind++;
+      }
+    }
+
+    console.timeEnd('generate climatology');
+    console.log('Climatology', climDf);
+
+    return climDf;
   }
 
   getRandData(options) {
@@ -554,13 +1053,31 @@ class JobUtil {
     console.log(`fetching: ${jobId}`);
     const appRoot = MiscUtil.getURI();
 
+    // first get the overall job info
+    let jobSumm;
+    try {
+      jobSumm = await MiscUtil.fetchJson(
+        `${appRoot}/GetJob.php?jobID=${jobId}`
+      );
+    } catch (err) {
+      console.warn(err);
+      this.clearAndShowError();
+      this.setJobLoading(false);
+      return;
+    }
+
+    // normalize fields
+    jobSumm.climatology = jobSumm.climatology === '1';
+
     // generate expected filenames
-    const tocFile = `${jobId}/${jobId}-ForTraCC-TOC.json`;
-    const maskHierarchyFile = `${jobId}/${jobId}-ForTraCC-Mask-Output-Hierarchy.json`;
+    const algo =
+      jobSumm.algorithm.toLowerCase() === 'auxgeoir' ? 'AuxGeoIR' : 'ForTraCC';
+    const tocFile = `${jobId}/${jobId}-${algo}-TOC.json`;
+    const maskHierarchyFile = `${jobId}/${jobId}-${algo}-Mask-Output-Hierarchy.json`;
 
     // fetch all the job data
     const promArr = [];
-    promArr.push(MiscUtil.fetchJson(`${appRoot}/GetJob.php?jobID=${jobId}`));
+    // promArr.push(MiscUtil.fetchJson(`${appRoot}/GetJob.php?jobID=${jobId}`));
     promArr.push(
       MiscUtil.fetchJson(`${appRoot}/GetJsonByKey.php?key=${tocFile}`)
     );
@@ -568,10 +1085,15 @@ class JobUtil {
       MiscUtil.fetchJson(`${appRoot}/GetJsonByKey.php?key=${maskHierarchyFile}`)
     );
     promArr.push(MiscUtil.fetchJson(`${appRoot}/api/location?jobID=${jobId}`));
+    promArr.push(
+      MiscUtil.fetchJson(
+        `${appRoot}/GetClimatologyFilesByJobID.php?jobID=${jobId}`
+      )
+    );
 
     // prepare to populate the page with the responses
     Promise.all(promArr)
-      .then(([jobSumm, anomList, maskHierarchy, interpFiles]) => {
+      .then(([anomList, maskHierarchy, interpFiles, climatologyFiles]) => {
         const polyFiles = [];
         const times = Object.keys(maskHierarchy.masks)
           .sort()
@@ -584,12 +1106,12 @@ class JobUtil {
 
         this._currJob = {
           id: jobId,
-          files: { tocFile, maskHierarchyFile, polyFiles },
+          files: { tocFile, maskHierarchyFile, polyFiles, climatologyFiles },
           anomList: anomList,
           jobSumm: jobSumm,
         };
 
-        this.populateChartForms(jobId, anomList, interpFiles, times);
+        this.populateChartForms(jobId, jobSumm, anomList, interpFiles, times);
         this.populateJobSummary(jobId, jobSumm);
 
         this.setJobLoading(false);
@@ -635,6 +1157,9 @@ class JobUtil {
     $('#chart_variable_select_1').html('<option value="">None</option>');
     $('#chart_variable_select_2').html('<option value="">None</option>');
     $('#chart_variable_select_3').html('<option value="">None</option>');
+    $('#vis_controls-chart_opts_hint').css('display', '');
+    $('#vis_controls-chart_opts_climatology').css('display', 'none');
+    $('#vis_controls-chart_opts').css('display', 'none');
   }
 
   populateJobSummary(jobId, jobSumm) {
@@ -708,19 +1233,24 @@ class JobUtil {
     _glob_mapUtil.setTimePolyByIdx(0);
   }
 
-  populateChartForms(jobId, anomSumm, interpFiles, times) {
-    const minDate = new Date(times[0].date);
-    const maxDate = new Date(times[times.length - 1].date);
+  populateChartForms(jobId, jobSumm, anomSumm, interpFiles, times) {
+    const {
+      startDate: startDateStr,
+      endDate: endDateStr,
+      climatology,
+    } = jobSumm;
+    const startDate = MiscUtil.parseDate(startDateStr).date;
+    const endDate = MiscUtil.parseDate(endDateStr).date;
 
     // format data for the table
     const tableData = anomSumm.map((anom) => {
       const { name, start_date, end_date } = anom;
 
       const anomalyId = name.match(/\d+/gi)[0];
-      const startDate = MiscUtil.parseDate(start_date);
-      const endDate = MiscUtil.parseDate(end_date);
+      const sDate = MiscUtil.parseDate(start_date);
+      const eDate = MiscUtil.parseDate(end_date);
 
-      return { anomalyId, startDate: startDate.str, endDate: endDate.str };
+      return { anomalyId, startDate: sDate.str, endDate: eDate.str };
     });
 
     // populate data table
@@ -739,7 +1269,7 @@ class JobUtil {
       enableTime: true,
       time_24hr: true,
       dateFormat: 'Y-m-d H:i',
-      defaultDate: minDate,
+      defaultDate: startDate,
       minuteIncrement: 15,
       // minDate,
       // maxDate,
@@ -748,7 +1278,7 @@ class JobUtil {
       enableTime: true,
       time_24hr: true,
       dateFormat: 'Y-m-d H:i',
-      defaultDate: maxDate,
+      defaultDate: endDate,
       minuteIncrement: 15,
       // minDate,
       // maxDate,
@@ -764,6 +1294,16 @@ class JobUtil {
     $('#chart_variable_select_3').html(
       [`<option value="">None</option>`].concat(varOptions).join('')
     );
+
+    // disable for climatology charts
+    if (climatology) {
+      $('#vis_controls-chart_opts_climatology').css('display', '');
+      $('#vis_controls-chart_opts').css('display', 'none');
+    } else {
+      $('#vis_controls-chart_opts').css('display', '');
+      $('#vis_controls-chart_opts_climatology').css('display', 'none');
+    }
+    $('#vis_controls-chart_opts_hint').css('display', 'none');
 
     $('#chart_create_btn').attr('disabled', false);
   }
@@ -799,6 +1339,10 @@ class ChartUtil {
       notation: 'compact',
     });
 
+    this._dateFormatter = (val) => {
+      return MiscUtil.formatDate(new Date(parseInt(val)));
+    };
+
     window.addEventListener('resize', function () {
       for (const chartId in this._chartStore) {
         const { chart } = this._chartStore[chartId];
@@ -825,14 +1369,21 @@ class ChartUtil {
     ).value;
     const anomalyIdsOpt = _glob_jobUtil.getSelectedAnomalyIds();
     const areaOpt = _glob_mapUtil.getDrawnBounds();
-    const { id: jobId } = _glob_jobUtil.getCurrJob();
+    const { id: jobId, jobSumm, files } = _glob_jobUtil.getCurrJob();
 
-    const chartNodeIdSet = this.createChartNode();
+    const isClimatologyChart = jobSumm.climatology;
+    const treatAsClimatologyChart =
+      document.getElementById('vis_is_climatology').checked;
+
+    // const chartNodeIdSet = this.createChartNode(isClimatologyChart);
+    const chartNodeIdSet = this.createChartNode(
+      isClimatologyChart || treatAsClimatologyChart
+    );
     const { chartId, chartNodeId } = chartNodeIdSet;
     const statNode = $(`#${chartNodeId}`).get(0);
 
     // init chart store
-    this._chartStore[chartId] = { idSet: chartNodeIdSet };
+    this._chartStore[chartId] = { idSet: chartNodeIdSet, isClimatologyChart };
 
     const statsChart = echarts.init(statNode, 'light', {
       renderer: 'canvas',
@@ -847,13 +1398,22 @@ class ChartUtil {
       },
     };
 
+    // get file list
+    const fileList = isClimatologyChart
+      ? files.climatologyFiles.files.map((f) =>
+          f.location.replace('s3://your-bucket-name/', '')
+        )
+      : [variableOpt1, variableOpt2, variableOpt3].filter((x) => x);
+
     // fetch data
     const dataPkg = await this._dataUtil.getData({
       times: [startDateOpt, endDateOpt],
-      files: [variableOpt1, variableOpt2, variableOpt3].filter((x) => x),
+      files: fileList,
       area: areaOpt,
       anomalies: anomalyIdsOpt,
+      isClimatologyChart,
       jobId,
+      dataBinRes: isClimatologyChart ? 'day' : 'none',
     });
     if (!dataPkg) {
       console.log('Failed to fetch data');
@@ -876,7 +1436,9 @@ class ChartUtil {
       });
 
       // build stats chart
-      const statsChartOpts = this.getStatsDataScatterOpts(dataPkg);
+      const statsChartOpts = this.getChartOpts(dataPkg, {
+        isClimatologyChart: isClimatologyChart || treatAsClimatologyChart,
+      });
       statsChart.setOption(statsChartOpts);
       statsChart.hideLoading();
 
@@ -888,8 +1450,17 @@ class ChartUtil {
     }
   }
 
-  getStatsDataScatterOpts(plotData, options = {}) {
-    const { stats: dfStats, varList, title, subtitle } = plotData;
+  getChartOpts(dataPkg, opts = {}) {
+    const { isClimatologyChart } = opts;
+    if (isClimatologyChart) {
+      return this.getTimeseriesChartOpts(dataPkg, opts);
+    } else {
+      return this.getScatterChartOpts(dataPkg, opts);
+    }
+  }
+
+  getScatterChartOpts(plotData, options = {}) {
+    const { data: dfData, varList, title, subtitle } = plotData;
 
     const customX = options.customX || `${varList[0]}_mean`;
     const customY = options.customY || `${varList[1]}_mean`;
@@ -946,9 +1517,9 @@ class ChartUtil {
                   </div>
                   <div style="display: flex; flex-flow: row nowrap; flex: 1 1">
                       <div style="flex: 1 1; font-weight: bold;">Time</div>
-                      <div style="flex: 1 1; font-family: monospace; text-align: right; padding-left: 8px;">${
-                        MiscUtil.formatDate(new Date(datetime))
-                      }</div>
+                      <div style="flex: 1 1; font-family: monospace; text-align: right; padding-left: 8px;">${MiscUtil.formatDate(
+                        new Date(datetime)
+                      )}</div>
                   </div>
               </div>
           </div>
@@ -968,12 +1539,6 @@ class ChartUtil {
           saveAsImage: {},
         },
       },
-      // grid: {
-      //   left: '10%',
-      //   top: '10%',
-      //   width: '85%',
-      //   height: '82%',
-      // },
       grid: [
         { left: '5%', top: '10%', width: '42%', height: '80%' }, // custom opts
         { right: '5%', top: '10%', width: '40%', height: '35%' }, // mean x mean
@@ -1059,8 +1624,8 @@ class ChartUtil {
       ),
       dataset: [
         {
-          source: dfStats.values,
-          dimensions: dfStats.columns.map((x) => {
+          source: dfData.values,
+          dimensions: dfData.columns.map((x) => {
             return {
               name: x,
               type:
@@ -1078,8 +1643,7 @@ class ChartUtil {
           type: 'scatter',
           symbolSize: 5,
           blendMode: 'source-over',
-          // large: true,
-          largeThreshold: 500,
+          large: true,
           xAxisIndex: 0,
           yAxisIndex: 0,
           encode: {
@@ -1094,8 +1658,7 @@ class ChartUtil {
               type: 'scatter',
               symbolSize: 5,
               blendMode: 'source-over',
-              large: false,
-              // largeThreshold: 500,
+              large: true,
               xAxisIndex: 1,
               yAxisIndex: i == 1 ? 1 : 3,
               encode: {
@@ -1107,8 +1670,7 @@ class ChartUtil {
               type: 'scatter',
               symbolSize: 5,
               blendMode: 'source-over',
-              large: false,
-              // largeThreshold: 500,
+              large: true,
               xAxisIndex: 2,
               yAxisIndex: i == 1 ? 2 : 4,
               encode: {
@@ -1120,6 +1682,396 @@ class ChartUtil {
           return acc;
         }, [])
       ),
+    };
+
+    return chartOpts;
+  }
+
+  getTimeseriesChartOpts(plotData, options = {}) {
+    const { data: dfData, varList, axisLabels, title, subtitle } = plotData;
+    const {
+      climatology = {
+        dataFrame: dfData,
+        resolution: 'week',
+        type: 'standard',
+        skip_step: 0,
+      },
+    } = options;
+
+    const xAxis = 'datetime';
+
+    const {
+      resolution: clim_res,
+      type: clim_type,
+      skip_step: clim_skip,
+    } = climatology;
+
+    const climData = this._dataUtil.getClimatology(climatology);
+
+    const getIndexVals = (varName, clim = false) => {
+      if (clim) {
+        const cols = climData.columns;
+        return [`${varName}_mean`, `${varName}_mean_std_dev`].map((x) =>
+          cols.indexOf(x)
+        );
+      }
+
+      const cols = dfData.columns;
+      return [
+        `${varName}_min`,
+        `${varName}_max`,
+        `${varName}_mean`,
+        `${varName}_std_dev`,
+      ].map((x) => cols.indexOf(x));
+    };
+
+    const colors = [
+      '#1b9e77',
+      '#d95f02',
+      '#7570b3',
+      '#e7298a',
+      '#66a61e',
+      '#e6ab02',
+      '#a6761d',
+      '#666666',
+    ];
+    const styles = colors.map((c) => {
+      return { stroke: c, fill: c, lineWidth: 2 };
+    });
+
+    const getRenderItem = (varName) => {
+      const indexVals = getIndexVals(varName);
+
+      return (params, api) => {
+        const xValue = api.value(0);
+        const min = api.value(indexVals[0]);
+        const max = api.value(indexVals[1]);
+        const mean = api.value(indexVals[2]);
+        // const stdDev = api.value(indexVals[3]);
+
+        // const meanH = mean + stdDev;
+        // const meanL = mean - stdDev;
+
+        const hPoint = api.coord([xValue, max]);
+        const lPoint = api.coord([xValue, min]);
+        const mPoint = api.coord([xValue, mean]);
+        // const mhPoint = api.coord([xValue, meanH]);
+        // const mlPoint = api.coord([xValue, meanL]);
+
+        const halfWidth = 2;
+
+        const styleInd = Math.floor(params.seriesIndex / 3) % styles.length;
+        const style = styles[styleInd];
+
+        return {
+          type: 'group',
+          style: style,
+          children: [
+            {
+              type: 'line',
+              shape: {
+                x1: lPoint[0],
+                y1: lPoint[1],
+                x2: hPoint[0],
+                y2: hPoint[1],
+              },
+            },
+            {
+              type: 'circle',
+              style: style,
+              shape: {
+                cx: mPoint[0],
+                cy: mPoint[1],
+                r: halfWidth,
+              },
+            },
+          ],
+        };
+      };
+    };
+
+    let full_subtitle = `${subtitle} · Climatology: ${clim_type} · Resolution: ${clim_res}`;
+    if (clim_type === 'skip_step') {
+      full_subtitle = `${full_subtitle} · Skip: ${clim_skip}`;
+    }
+    const chartOpts = {
+      animation: false,
+      title: {
+        text: title,
+        subtext: full_subtitle,
+        itemGap: 0,
+      },
+      tooltip: {
+        transitionDuration: 0,
+        trigger: 'axis',
+        position: function (pos, params, el, elRect, size) {
+          var obj = { top: 50 };
+          obj[['left', 'right'][+(pos[0] < size.viewSize[0] / 2)]] = 70;
+          return obj;
+        },
+        axisPointer: {
+          type: 'cross',
+        },
+        formatter: (parms, ticket, cb) => {
+          const rep = parms[0];
+
+          const { value: repVals } = rep;
+          const [datetime] = repVals;
+
+          let climVals;
+          if (climData.values.length < dfData.values.length) {
+            // get the relevant row of climatology data
+            climVals = climData.query(climData['datetime'].le(datetime)).values;
+            climVals = climVals[climVals.length - 1];
+          } else {
+            climVals = climData.values[rep.dataIndex];
+          }
+
+          // filter out the confidence ranges
+          parms = parms
+            .filter((p) => p.componentSubType === 'custom')
+            .sort((a, b) => a.seriesIndex - b.seriesIndex);
+
+          const entries = parms
+            .map((ent) => {
+              const { color, value, seriesIndex } = ent;
+              const varIndex = Math.floor(seriesIndex / 3);
+              const varName = varList[varIndex];
+              const [minInd, maxInd, meanInd, stdDevInd] =
+                getIndexVals(varName);
+              const [climMeanInd, climStdDevInd] = getIndexVals(varName, true);
+
+              const yLabel = axisLabels[varIndex];
+              const minValue = isNaN(value[minInd])
+                ? '--'
+                : MiscUtil.round(value[minInd], 5);
+              const maxValue = isNaN(value[maxInd])
+                ? '--'
+                : MiscUtil.round(value[maxInd], 5);
+              const meanValue = isNaN(value[meanInd])
+                ? '--'
+                : MiscUtil.round(value[meanInd], 5);
+              // const stdDevValue = isNaN(value[stdDevInd])
+              //   ? '--'
+              //   : MiscUtil.round(value[stdDevInd], 5);
+
+              const climMean = isNaN(climVals[climMeanInd])
+                ? '--'
+                : MiscUtil.round(climVals[climMeanInd], 5);
+              const climStdDev = isNaN(climVals[climStdDevInd])
+                ? '--'
+                : MiscUtil.round(climVals[climStdDevInd], 5);
+
+              return `
+                  <div style="display: flex; flex-flow: column nowrap; flex: 1 1; padding-bottom: 2px; margin-bottom: 2px; border-bottom: 1px solid #CCC;">
+                    <div style="display: flex; flex-flow: row nowrap;">
+                      <div style="flex-basis 20px; width: 20px; padding: 4px;">
+                          <div style="display: block; border-radius: 50%; width: 10px; height: 10px; background: ${color}"></div>
+                      </div>
+                      <div style="flex: 1 1; font-weight: bold;">${yLabel}</div>
+                    </div>
+                    <div style="display: flex; flex-flow: row nowrap; padding-left: 20px;">
+                      <div style="flex: 1 1; font-weight: bold;">Mean</div>
+                      <div style="flex-basis: 1 1; font-family: monospace; text-align: right; padding-left: 8px;">${meanValue}</div>
+                    </div>
+                    <div style="display: flex; flex-flow: row nowrap; padding-left: 20px;">
+                      <div style="flex: 1 1; font-weight: bold;">Range</div>
+                      <div style="flex-basis: 1 1; font-family: monospace; text-align: right; padding-left: 8px;">${minValue} to ${maxValue}</div>
+                    </div>
+                    <div style="display: flex; flex-flow: row nowrap; padding-left: 20px;">
+                      <div style="flex: 1 1; font-weight: bold;">Climatology</div>
+                      <div style="flex-basis: 1 1; font-family: monospace; text-align: right; padding-left: 8px;">${climMean} ± ${climStdDev}</div>
+                    </div>
+                  </div>
+                `;
+            })
+            .join('');
+
+          return `
+              <div style="display: flex; flex-flow: column nowrap;">
+                <div style="display: flex; flex-flow: row nowrap; flex: 1 1; padding-bottom: 2px; margin-bottom: 2px; border-bottom: 1px solid #FFF;">
+                  <div style="flex: 1 1; font-weight: bold;">Time</div>
+                  <div style="flex: 1 1; font-family: monospace; text-align: right; padding-left: 8px;">${MiscUtil.formatDate(
+                    new Date(datetime)
+                  )}</div>
+                </div>
+                ${entries}
+              </div>
+              `;
+        },
+      },
+      axisPointer: {
+        link: { xAxisIndex: 'all' },
+        label: {
+          formatter: (parms) =>
+            parms.axisDimension === 'x'
+              ? this._dateFormatter(parms.value)
+              : this._stdFormatter.format(parms.value),
+        },
+      },
+      toolbox: {
+        feature: {
+          saveAsImage: {},
+        },
+      },
+      dataZoom: [
+        {
+          id: 'dataZoomX',
+          type: 'slider',
+          xAxisIndex: varList.map((v, i) => i),
+          height: 20,
+          // minValueSpan: 3600 * 24 * 1000, // one day
+        },
+      ],
+      grid: varList.map((v, i) => {
+        const prop = 1 / varList.length;
+        const sep = 4; // 4% separation between charts
+        const height = (84 - (sep * varList.length - 1)) * prop; // total height should be 80%
+        const offset = height * i + sep * i + 8; // keep 10% at the top
+        return {
+          left: '6%',
+          width: '90%',
+          top: `${offset}%`,
+          height: `${height}%`,
+          borderWidth: 1,
+          show: true,
+        };
+      }),
+      xAxis: varList.map((v, i) => {
+        const show = i === varList.length - 1;
+        return {
+          name: '',
+          nameLocation: 'center',
+          position: 'bottom',
+          nameGap: 25,
+          scale: true,
+          type: 'time',
+          gridIndex: i,
+          alignTicks: true,
+          show,
+          axisLine: {
+            onZero: false,
+          },
+          axisTick: {
+            inside: true,
+          },
+          axisLabel: {
+            formatter: this._dateFormatter,
+          },
+          nameTextStyle: { color: 'black', fontWeigt: 'bold' },
+        };
+      }),
+      yAxis: axisLabels.map((v, i) => {
+        return {
+          name: v,
+          type: 'value',
+          nameLocation: 'end',
+          position: 'left',
+          nameGap: 3,
+          // axisLine: { onZero: false },
+          scale: true,
+          gridIndex: i,
+          axisLabel: {
+            formatter: this._stdFormatter.format,
+            verticalAlignMaxLabel: 'top',
+          },
+          nameTextStyle: { color: 'black', fontWeigt: 'bold', align: 'left' },
+        };
+      }),
+      dataset: [
+        {
+          source: dfData.values,
+          dimensions: dfData.columns.map((x) => {
+            return {
+              name: x,
+              type:
+                x.indexOf('datetime') >= 0
+                  ? 'time'
+                  : x === 'anom_id'
+                  ? 'int'
+                  : 'float',
+            };
+          }),
+        },
+        {
+          source: climData.values,
+          dimensions: climData.columns.map((x) => {
+            return {
+              name: x,
+              type:
+                x.indexOf('datetime') >= 0
+                  ? 'time'
+                  : x === 'anom_id'
+                  ? 'int'
+                  : 'float',
+            };
+          }),
+        },
+      ],
+      series: varList.reduce((acc, v, i) => {
+        acc.push({
+          type: 'line',
+          xAxisIndex: i,
+          yAxisIndex: i,
+          datasetIndex: 1,
+          encode: {
+            x: xAxis,
+            y: `${v}_mean_minus_std_dev`,
+          },
+          lineStyle: {
+            opacity: 0,
+          },
+          symbol: 'none',
+          z: 1,
+          silent: true,
+          emphasis: {
+            disabled: true,
+          },
+          tooltip: { show: false },
+          stack: `${v}_confidence-band`,
+        });
+        acc.push({
+          type: 'line',
+          xAxisIndex: i,
+          yAxisIndex: i,
+          datasetIndex: 1,
+          encode: {
+            x: xAxis,
+            y: `${v}_double_std_dev`,
+          },
+          lineStyle: {
+            opacity: 0,
+          },
+          symbol: 'none',
+          areaStyle: {
+            color: '#ccc',
+          },
+          z: 1,
+          silent: true,
+          emphasis: {
+            disabled: true,
+          },
+          tooltip: { show: false },
+          stack: `${v}_confidence-band`,
+        });
+        acc.push({
+          type: 'custom',
+          renderItem: getRenderItem(v),
+          blendMode: 'source-over',
+          progressiveThreshold: 1,
+          // progressive: 2000,
+          large: true,
+          xAxisIndex: i,
+          yAxisIndex: i,
+          datasetIndex: 0,
+          encode: {
+            x: xAxis,
+            y: [`${v}_min`, `${v}_max`],
+          },
+        });
+
+        return acc;
+      }, []),
     };
 
     return chartOpts;
@@ -1147,12 +2099,6 @@ class ChartUtil {
         anomalyMetadata[id].endDate = MiscUtil.formatDate(
           new Date(anomalyMetadata[id].endDate)
         );
-        // anomalyMetadata[id].startDate = MiscUtil.parseDate(
-        //   anomalyMetadata[id].startDate
-        // ).str;
-        // anomalyMetadata[id].endDate = MiscUtil.parseDate(
-        //   anomalyMetadata[id].endDate
-        // ).str;
         return anomalyMetadata[id];
       });
 
@@ -1182,8 +2128,6 @@ class ChartUtil {
     });
 
     // init date selectors
-    // let minDateSelect = MiscUtil.parseDate(minDate).date;
-    // let maxDateSelect = MiscUtil.parseDate(maxDate).date;
     const minDateSelect = new Date(minDate);
     const maxDateSelect = new Date(maxDate);
     $(`#${chartSelectStartDateId}`).flatpickr({
@@ -1235,7 +2179,7 @@ class ChartUtil {
     });
   }
 
-  createChartNode() {
+  createChartNode(isClimatologyChart) {
     // create a bunch of node identifiers
     const chartId = MiscUtil.getRandId(8);
     const chartParentId = `chart_container_${chartId}`;
@@ -1246,74 +2190,19 @@ class ChartUtil {
     const chartSelectEndDateId = `chart_select_enddate_${chartId}`;
     const chartStatsScatterScaleXExprId = `chart_select_custom_expr_x_${chartId}`;
     const chartStatsScatterScaleYExprId = `chart_select_custom_expr_y_${chartId}`;
+    const chartSelectClimBinSizeId = `stats_clim_bin_size_${chartId}`;
+    const chartSelectClimChunkTypeId = `stats_clim_chunk_type_${chartId}`;
+    const chartSelectClimSkipStepSizeId = `stats_clim_skip_step_size_${chartId}`;
+    const chartSelectDataPointBinSizeId = `stats_data_point_bin_size_${chartId}`;
     const chartsStatsVariableListId = `chart_vars_${chartId}`;
 
     // TODO - add the actual variable strings to the hint
 
-    // create new dom node
-    const newChartStr = `
-        <div id="${chartParentId}" class="vis_chart-node-wrapper">
-            <div style="flex: 1 1; height: 100%; padding: 0px 36px 0px 8px; display: flex; flex-flow: row nowrap;">
-                  <div id="${chartNodeId}" style="width: 100%; height: 100%;"></div>
-            </div>    
-            <div id="${chartControlsId}" class="vis_chart-controls-menu" style="flex-basis: 40%; width: 40%; height: 100%; display: flex; flex-flow: row nowrap; background: white; padding-left: 8px; border-left: 1px solid #AAA;">
-                <div style="flex-basis: 24px; width: 24px; cursor: pointer; padding-top: 17px;" onclick="_glob_chartUtil.toggleMenu('${chartId}')">
-                    [-]
-                </div>
-                <div style="flex: 1 1; display: flex; flex-flow: column; padding: 8px 0px;">
-                    <div style="font-size: 16px; font-weight: bold; padding: 8px; 0px;">Adjust Chart Options</div>
-                    <div style="overflow: hidden; display: flex; flex-flow: column;">
-                        <table id="${chartTableId}" class="display table-responsive cell-border" style="flex: 1 1;">
-                            <thead>
-                                <tr>
-                                    <th class="qth">Anomaly</th>
-                                    <th class="qth">Start Time</th>
-                                    <th class="qth">End Time</th>
-                                </tr>
-                            </thead>
-                        </table>
-                        <div style="flex-basis: 24px; height: 24px; text-align: right; margin-top: -24px; z-index: 2;">
-                            <input type="button" value="None" onClick="_glob_chartUtil.clearAllAnomalies('${chartId}')" />
-                            <input type="button" value="All" onClick="_glob_chartUtil.selectAllAnomalies('${chartId}')" />
-                        </div>
-                    </div>
-                    <div style="flex-basis: 40px; height: 40px; display: flex; flex-flow: row nowrap; padding: 4px 0px;">
-                        <div style="flex: 1 1; display: flex; justify-content: flex-start; align-items: center; padding-right: 16px;">
-                            <label for="${chartSelectStartDateId}" style="padding-right: 4px;">Start Date</label>
-                            <input id="${chartSelectStartDateId}" name="${chartSelectStartDateId}" placeholder="yyyy-mm-dd" style="flex: 1 1;" />
-                        </div>
-                        <div style="flex: 1 1; display: flex; justify-content: flex-end; align-items: center;">
-                            <label for="${chartSelectEndDateId}" style="padding-right: 4px;">End Date</label>
-                            <input id="${chartSelectEndDateId}" name="${chartSelectEndDateId}" placeholder="yyyy-mm-dd" style="flex: 1 1;" />
-                        </div>
-                    </div>
-                    <div style="flex: 1 1; display: block; padding: 4px 0px;">
-                        <div style="font-size: 14px; font-weight: bold; padding: 8px 0px 4px 0px;">Statistics Scatter Chart</div>
-                        <div style="font-size: 12px; padding: 4px 0px 2px 0px;">Variables: {mean, std_dev, min, max} or {datetime} Operators: {+, -, *, /, ^}</div>
-                        <div style="font-size: 12px; padding: 2px 0px 8px 0px;">Example expression: 2 * {precipitation_mean} + {TQV_mean} / 2</div>
-                        <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 4px;">
-                            <label for="${chartStatsScatterScaleXExprId}" style="padding-right: 4px; flex-basis: 25%; width: 25%;">X Series</label>
-                            <input id="${chartStatsScatterScaleXExprId}" name="${chartStatsScatterScaleXExprId}" placeholder="_mean" style="flex: 1 1;" />
-                        </div>
-                        <div style="display: flex; justify-content: flex-end; align-items: center;">
-                            <label for="${chartStatsScatterScaleYExprId}" style="padding-right: 4px; flex-basis: 25%; width: 25%;">Y Series</label>
-                            <input id="${chartStatsScatterScaleYExprId}" name="${chartStatsScatterScaleYExprId}" placeholder="_mean" style="flex: 1 1;" />
-                        </div>
-                    </div>
-                    <div style="flex-basis: 24px; height: 24px; text-align: right;">
-                        <input type="button" value="Remove" onClick="_glob_chartUtil.removeChart('${chartId}')" />
-                        <input type="button" value="Reset" onClick="_glob_chartUtil.resetChart('${chartId}')" />
-                        <input type="button" value="Update" onClick="_glob_chartUtil.updateChart('${chartId}')" />
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    const dims = document
+      .getElementById('vis_main-wrapper')
+      .getBoundingClientRect();
 
-    // add nodes into the dom
-    $('#charts_list').append(newChartStr);
-
-    return {
+    const idSet = {
       chartId,
       chartParentId,
       chartNodeId,
@@ -1323,7 +2212,179 @@ class ChartUtil {
       chartSelectEndDateId,
       chartStatsScatterScaleXExprId,
       chartStatsScatterScaleYExprId,
+      chartSelectClimBinSizeId,
+      chartSelectClimChunkTypeId,
+      chartSelectClimSkipStepSizeId,
+      chartSelectDataPointBinSizeId,
     };
+
+    // create new dom node
+    const newChartStr = `
+        <div id="${chartParentId}" class="vis_chart-node-wrapper" style="height: ${
+      dims.height
+    }px;">
+            <div style="flex: 1 1; height: 100%; padding: 0px 36px 0px 8px; display: flex; flex-flow: row nowrap;">
+                  <div id="${chartNodeId}" style="width: 100%; height: 100%;"></div>
+            </div>    
+            ${
+              isClimatologyChart
+                ? this.getStatsDataTimeseriesMenuNode(idSet)
+                : this.getStatsDataScatterMenuNode(idSet)
+            }
+        </div>
+    `;
+
+    // add nodes into the dom
+    $('#charts_list').append(newChartStr);
+
+    return idSet;
+  }
+
+  getStatsDataScatterMenuNode(options) {
+    const {
+      chartId,
+      chartControlsId,
+      chartTableId,
+      chartSelectStartDateId,
+      chartSelectEndDateId,
+      chartStatsScatterScaleXExprId,
+      chartStatsScatterScaleYExprId,
+    } = options;
+    return `
+        <div id="${chartControlsId}" class="vis_chart-controls-menu" style="flex-basis: 40%; width: 40%; height: 100%; display: flex; flex-flow: row nowrap; background: white; padding-left: 8px; border-left: 1px solid #AAA;">
+          <div style="flex-basis: 24px; width: 24px; cursor: pointer; padding-top: 17px;" onclick="_glob_chartUtil.toggleMenu('${chartId}')">
+              [-]
+          </div>
+          <div style="flex: 1 1; display: flex; flex-flow: column; padding: 8px 0px;">
+             <div style="display: flex; flex-flow: row nowrap; justify-content: space-between; align-items: center;">
+              <div style="font-size: 16px; font-weight: bold; padding: 8px;">Adjust Chart Options</div>
+              <div style="text-align: right;">
+                  <input type="button" value="Remove" onClick="_glob_chartUtil.removeChart('${chartId}')" />
+                  <input type="button" value="Reset" onClick="_glob_chartUtil.resetChart('${chartId}')" />
+                  <input type="button" value="Update" onClick="_glob_chartUtil.updateChart('${chartId}')" />
+              </div>
+            </div>
+            <div style="flex: 1 1; padding: 0px 0px 0px 8px; overflow: hidden; overflow-y: auto;">
+              <div style="overflow: hidden; display: flex; flex-flow: column;">
+                  <table id="${chartTableId}" class="display table-responsive cell-border" style="flex: 1 1;">
+                      <thead>
+                          <tr>
+                              <th class="qth">Anomaly</th>
+                              <th class="qth">Start Time</th>
+                              <th class="qth">End Time</th>
+                          </tr>
+                      </thead>
+                  </table>
+                  <div style="flex-basis: 24px; height: 24px; text-align: right; margin-top: -24px; z-index: 2;">
+                      <input type="button" value="None" onClick="_glob_chartUtil.clearAllAnomalies('${chartId}')" />
+                      <input type="button" value="All" onClick="_glob_chartUtil.selectAllAnomalies('${chartId}')" />
+                  </div>
+              </div>
+              <div style="flex-basis: 40px; height: 40px; display: flex; flex-flow: row nowrap; padding: 4px 0px;">
+                  <div style="flex: 1 1; display: flex; justify-content: flex-start; align-items: center; padding-right: 16px;">
+                      <label for="${chartSelectStartDateId}" style="padding-right: 4px;">Start Date</label>
+                      <input id="${chartSelectStartDateId}" name="${chartSelectStartDateId}" placeholder="yyyy-mm-dd" style="flex: 1 1;" />
+                  </div>
+                  <div style="flex: 1 1; display: flex; justify-content: flex-end; align-items: center;">
+                      <label for="${chartSelectEndDateId}" style="padding-right: 4px;">End Date</label>
+                      <input id="${chartSelectEndDateId}" name="${chartSelectEndDateId}" placeholder="yyyy-mm-dd" style="flex: 1 1;" />
+                  </div>
+              </div>
+              <div style="flex: 1 1; display: block; padding: 4px 0px;">
+                  <div style="font-size: 14px; font-weight: bold; padding: 8px 0px 4px 0px;">Statistics Scatter Chart</div>
+                  <div style="font-size: 12px; padding: 4px 0px 2px 0px;">Variables: {mean, std_dev, min, max} or {datetime} Operators: {+, -, *, /, ^}</div>
+                  <div style="font-size: 12px; padding: 2px 0px 8px 0px;">Example expression: 2 * {precipitation_mean} + {TQV_mean} / 2</div>
+                  <div style="display: flex; justify-content: flex-start; align-items: center; margin-bottom: 4px;">
+                      <label for="${chartStatsScatterScaleXExprId}" style="padding-right: 4px; flex-basis: 25%; width: 25%;">X Series</label>
+                      <input id="${chartStatsScatterScaleXExprId}" name="${chartStatsScatterScaleXExprId}" placeholder="_mean" style="flex: 1 1;" />
+                  </div>
+                  <div style="display: flex; justify-content: flex-end; align-items: center;">
+                      <label for="${chartStatsScatterScaleYExprId}" style="padding-right: 4px; flex-basis: 25%; width: 25%;">Y Series</label>
+                      <input id="${chartStatsScatterScaleYExprId}" name="${chartStatsScatterScaleYExprId}" placeholder="_mean" style="flex: 1 1;" />
+                  </div>
+              </div>
+          </div>
+      </div>
+    `;
+  }
+
+  getStatsDataTimeseriesMenuNode(options) {
+    const {
+      chartId,
+      chartControlsId,
+      chartSelectDataPointBinSizeId,
+      chartSelectClimBinSizeId,
+      chartSelectClimChunkTypeId,
+      chartSelectClimSkipStepSizeId,
+    } = options;
+
+    // TODO format this sensibly
+    return `
+        <div id="${chartControlsId}" class="vis_chart-controls-menu" style="flex-basis: 40%; width: 40%; height: 100%; display: flex; flex-flow: row nowrap; background: white; padding-left: 8px; border-left: 1px solid #AAA;">
+          <div style="flex-basis: 24px; width: 24px; cursor: pointer; padding-top: 17px;" onclick="_glob_chartUtil.toggleMenu('${chartId}')">
+              [-]
+          </div>
+          <div style="flex: 1 1; display: flex; flex-flow: column; padding: 8px 0px;">
+              <div style="font-size: 16px; font-weight: bold; padding: 8px;">Adjust Chart Options</div>
+            <div style="display: flex; flex-flow: row nowrap; justify-content: space-between; align-items: center;">
+              <div style="font-size: 16px; font-weight: bold; padding: 8px;">Adjust Chart Options</div>
+              <div style="text-align: right;">
+                  <input type="button" value="Remove" onClick="_glob_chartUtil.removeChart('${chartId}')" />
+                  <input type="button" value="Reset" onClick="_glob_chartUtil.resetChart('${chartId}')" />
+                  <input type="button" value="Update" onClick="_glob_chartUtil.updateChart('${chartId}')" />
+              </div>
+            </div>
+            <div style="flex: 1 1; padding: 0px 0px 0px 8px; overflow: hidden; overflow-y: auto;">
+              <div class="vis_labeled-select-small">
+                <label for="${chartSelectDataPointBinSizeId}" class="lbold12" style="width: auto; flex: 1 1;">Data Point Binning</label>
+                <select class="normal10 vis_btn" id="${chartSelectDataPointBinSizeId}" name="${chartSelectDataPointBinSizeId}" style="flex-basis: 30%; width: 30%;">
+                  <option selected value="day">None</option>
+                  <option value="day">Day</option>
+                  <option value="week">Week</option>
+                  <option value="month">Month</option>
+                  <option value="year">Year</option>
+                </select>
+              </div>  
+              <div class="vis_labeled-select-small">
+                <label for="${chartSelectClimBinSizeId}" class="lbold12" style="width: auto; flex: 1 1;">Climatology Bin Size</label>
+                <select class="normal10 vis_btn" id="${chartSelectClimBinSizeId}" name="${chartSelectClimBinSizeId}" style="flex-basis: 30%; width: 30%;">
+                  <option value="day">Day</option>
+                  <option selected value="week">Week</option>
+                  <option value="month">Month</option>
+                  <option value="year">Year</option>
+                </select>
+              </div>
+              <div class="vis_labeled-select-small">
+                <label for="${chartSelectClimChunkTypeId}" class="lbold12" style="width: auto; flex: 1 1;">Climatology Bin Type</label>
+                <select class="normal10 vis_btn" id="${chartSelectClimChunkTypeId}" name="${chartSelectClimChunkTypeId}" style="flex-basis: 30%; width: 30%;">
+                  <option selected value="standard">Standard</option>
+                  <option value="rolling">Rolling</option>
+                  <option value="skip_step">Skip Step</option>
+                </select>
+              </div>
+              <div class="vis_labeled-select-small">
+                <label for="${chartSelectClimSkipStepSizeId}" class="lbold12" style="width: auto; flex: 1 1;">Skip Size</label>
+                <input id="${chartSelectClimSkipStepSizeId}" name="${chartSelectClimSkipStepSizeId}" style="flex-basis: 30%; width: 30%;" type="number" placeholder="0">
+              </div>
+              <div class="vis_timeseries_info">
+                The timeseries plots visualize the following values:
+                <ol style="list-style: auto; padding: revert;">
+                  <li>Bin Size Mean (aggregated from the sub-daily mean values)</li>
+                  <li>Bin Size Max (max value from the sub-daily max values)</li>
+                  <li>Bin Size Min (min value from the sub-daily min values)</li>
+                  <li>Climatology mean (mean of the means in the climatology bin)</li>
+                  <li>Climatology std dev (std dev of the means in the climatology bin)</li>
+                </ol>
+                These values are represented by:
+                <ul style="list-style: auto; padding: revert;">
+                  <li>A colored circle for the mean (1)</li>
+                  <li>A black vertical bar spanning the min (3) and the max (4) values</li>
+                  <li>A grey area spanning the climatology mean (4) +/- the climatology std dev (5)</li>
+                </ul>
+              </div>
+            </div>
+        </div>
+    `;
   }
 
   resetChart(chartId) {
@@ -1360,128 +2421,141 @@ class ChartUtil {
   }
 
   updateChart(chartId) {
-    const { charts, dataTable, dataPkg, idSet } = this._chartStore[chartId];
+    const { charts, dataTable, dataPkg, idSet, isClimatologyChart } =
+      this._chartStore[chartId];
     const { stats: statsChart } = charts;
-    const {
-      values: df,
-      stats: dfStats,
-      axisLabels,
-      minDate,
-      maxDate,
-    } = dataPkg;
+    const { data: dfData, axisLabels, minDate, maxDate } = dataPkg;
     const {
       chartSelectStartDateId,
       chartSelectEndDateId,
       chartStatsScatterScaleXExprId,
       chartStatsScatterScaleYExprId,
+      chartSelectClimBinSizeId,
+      chartSelectClimChunkTypeId,
+      chartSelectClimSkipStepSizeId,
+      chartSelectDataPointBinSizeId,
     } = idSet;
 
     statsChart.showLoading();
 
-    // get selected anomaly IDs
-    const selectedIds = [];
-    dataTable.rows('.selected').every(function () {
-      const rowData = this.data();
-      selectedIds.push(rowData.anomalyId);
-    });
+    dfData.resetIndex({ inplace: true });
 
-    // parse out date from selectors
-    let sDate = minDate;
-    let eDate = maxDate;
-    const sDateInput = $(`#${chartSelectStartDateId}`)[0]._flatpickr;
-    const eDateInput = $(`#${chartSelectEndDateId}`)[0]._flatpickr;
-    if (sDateInput) {
-      const sDateVal = sDateInput.selectedDates[0];
-      sDate = sDateVal.getTime();
-      // sDate = parseInt(
-      //   `${sDateVal.getFullYear()}${MiscUtil.padNum(
-      //     sDateVal.getMonth() + 1,
-      //     2
-      //   )}${MiscUtil.padNum(sDateVal.getDate(), 2)}${MiscUtil.padNum(
-      //     sDateVal.getHours(),
-      //     2
-      //   )}${MiscUtil.padNum(sDateVal.getMinutes(), 2)}`
-      // ); // use int for comparison
-    }
-    if (eDateInput) {
-      const eDateVal = eDateInput.selectedDates[0];
-      eDate = eDateVal.getTime();
-      // eDate = parseInt(
-      //   `${eDateVal.getFullYear()}${MiscUtil.padNum(
-      //     eDateVal.getMonth() + 1,
-      //     2
-      //   )}${MiscUtil.padNum(eDateVal.getDate(), 2)}${MiscUtil.padNum(
-      //     eDateVal.getHours(),
-      //     2
-      //   )}${MiscUtil.padNum(eDateVal.getMinutes(), 2)}`
-      // ); // use int for comparison
-    }
+    const opts = {};
 
-    // filter to selections
-    let dfStatsFiltered = dfStats.query(
-      dfStats['datetime'].ge(sDate).and(dfStats['datetime'].le(eDate))
-    );
+    let dfDataCustom = dfData;
+    if (isClimatologyChart) {
+      // parse out climatology options
+      const chartSelectDataPointBinSize = document.getElementById(
+        `${chartSelectDataPointBinSizeId}`
+      ).value; // day, week, month, year
+      const chartSelectClimBinSize = document.getElementById(
+        `${chartSelectClimBinSizeId}`
+      ).value; // day, week, month, year
+      const chartSelectClimChunkType = document.getElementById(
+        `${chartSelectClimChunkTypeId}`
+      ).value; // standard, rolling, skip_step
+      const chartSelectSkipStepSize = document.getElementById(
+        `${chartSelectClimSkipStepSizeId}`
+      ).value; // 1,2,3,...
 
-    if (selectedIds.length > 0) {
-      dfStatsFiltered = dfStatsFiltered.loc({
-        rows: dfStatsFiltered['anom_id'].values.map((x) =>
-          selectedIds.includes(x)
-        ),
-      });
-    }
+      // prep options for generating the climatology
+      opts['climatology'] = {
+        dataFrame: dfDataCustom,
+        resolution: chartSelectClimBinSize,
+        type: chartSelectClimChunkType,
+        skip_step: parseFloat(chartSelectSkipStepSize),
+      };
+    } else {
+      // parse out date from selectors
+      let sDate = minDate;
+      let eDate = maxDate;
+      const sDateInput = $(`#${chartSelectStartDateId}`)[0]._flatpickr;
+      const eDateInput = $(`#${chartSelectEndDateId}`)[0]._flatpickr;
+      if (sDateInput) {
+        const sDateVal = sDateInput.selectedDates[0];
+        sDate = sDateVal.getTime();
+      }
+      if (eDateInput) {
+        const eDateVal = eDateInput.selectedDates[0];
+        eDate = eDateVal.getTime();
+      }
 
-    // generate custom series
-    const statsScatterCustomExprX = $(`#${chartStatsScatterScaleXExprId}`)[0]
-      .value;
-    const statsScatterCustomExprY = $(`#${chartStatsScatterScaleYExprId}`)[0]
-      .value;
-    const varAxisMap = dfStats.columns.reduce((acc, col, ind) => {
-      const mapStr = `var${ind + 1}`;
-      acc[mapStr] = col;
-      return acc;
-    }, {});
-
-    let dfStatsCustom = dfStatsFiltered;
-    if (statsScatterCustomExprX) {
-      const customSeriesX = this._dataUtil.applyExprToDataFrame({
-        dataFrame: dfStatsFiltered,
-        axisMap: varAxisMap,
-        expr: statsScatterCustomExprX,
-      });
-      dfStatsCustom = dfStatsCustom.addColumn(
-        statsScatterCustomExprX,
-        customSeriesX
+      // filter to selections
+      let dfDataFiltered = dfData.query(
+        dfData['datetime'].ge(sDate).and(dfData['datetime'].le(eDate))
       );
-    }
 
-    if (statsScatterCustomExprY) {
-      const customSeriesY = this._dataUtil.applyExprToDataFrame({
-        dataFrame: dfStatsFiltered,
-        axisMap: varAxisMap,
-        expr: statsScatterCustomExprY,
+      // get selected anomaly IDs
+      const selectedIds = [];
+      dataTable.rows('.selected').every(function () {
+        const rowData = this.data();
+        selectedIds.push(rowData.anomalyId);
       });
 
-      dfStatsCustom = dfStatsCustom.addColumn(
-        statsScatterCustomExprY,
-        customSeriesY
-      );
+      if (selectedIds.length > 0) {
+        dfDataFiltered = dfDataFiltered.loc({
+          rows: dfDataFiltered['anom_id'].values.map((x) =>
+            selectedIds.includes(x)
+          ),
+        });
+      }
+
+      // generate custom series
+      const statsScatterCustomExprX = $(`#${chartStatsScatterScaleXExprId}`)[0]
+        .value;
+      const statsScatterCustomExprY = $(`#${chartStatsScatterScaleYExprId}`)[0]
+        .value;
+      const varAxisMap = dfData.columns.reduce((acc, col, ind) => {
+        const mapStr = `var${ind + 1}`;
+        acc[mapStr] = col;
+        return acc;
+      }, {});
+
+      dfDataCustom = dfDataFiltered;
+      if (statsScatterCustomExprX) {
+        const customSeriesX = this._dataUtil.applyExprToDataFrame({
+          dataFrame: dfDataFiltered,
+          axisMap: varAxisMap,
+          expr: statsScatterCustomExprX,
+        });
+        dfDataCustom = dfDataCustom.addColumn(
+          statsScatterCustomExprX,
+          customSeriesX
+        );
+      }
+
+      if (statsScatterCustomExprY) {
+        const customSeriesY = this._dataUtil.applyExprToDataFrame({
+          dataFrame: dfDataFiltered,
+          axisMap: varAxisMap,
+          expr: statsScatterCustomExprY,
+        });
+
+        dfDataCustom = dfDataCustom.addColumn(
+          statsScatterCustomExprY,
+          customSeriesY
+        );
+      }
+
+      opts['customX'] = statsScatterCustomExprX || undefined;
+      opts['customY'] = statsScatterCustomExprY || undefined;
     }
 
     // create new object with filtered data
     const filteredDataPkg = {
       ...dataPkg,
-      stats: dfStatsCustom,
+      data: dfDataCustom,
     };
 
     // collect new option sets and update charts
-    const statsChartOpts = this.getStatsDataScatterOpts(filteredDataPkg, {
-      customX: statsScatterCustomExprX || undefined,
-      customY: statsScatterCustomExprY || undefined,
+    const statsChartOpts = this.getChartOpts(filteredDataPkg, {
+      isClimatologyChart,
+      ...opts,
     });
     statsChart.setOption(statsChartOpts, { notMerge: true });
     statsChart.hideLoading();
 
-    console.log('updated package', filteredDataPkg);
+    // console.log('updated package', filteredDataPkg);
   }
 
   removeChart(chartId) {
@@ -1590,13 +2664,6 @@ class MapUtil {
         drawControlFull.addTo(map);
       }
     });
-
-    // map.on(L.Draw.Event.EDITED, (evt) => {
-    //     const { layers } = evt;
-    //     layers.eachLayer((layer) => {
-    //         console.log('EDIT', layer);
-    //     });
-    // });
 
     // add hover control
     const info = L.control();

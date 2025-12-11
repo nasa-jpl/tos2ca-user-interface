@@ -8,7 +8,7 @@
   argumentCountValidate($_GET, 1);
   jobIDValidate($jobID);
 
-  $sql = "select j.dataset, j.variable, j.description, j.startDate, j.endDate, j.ineqOperator, j.ineqValue, j.phdefJobID, ST_AsText(j.coords) as coords, u.lastName, u.firstName, u.email from jobs j, users u where j.jobID=? and j.userID = u.userID";
+  $sql = "select j.dataset, j.variable, j.description, j.startDate, j.endDate, j.ineqOperator, j.ineqValue, j.phdefJobID, ST_AsText(j.coords) as coords, j.algorithm, j.warmerToggle, j.warmerValue, j.climatology, u.lastName, u.firstName, u.email from jobs j, users u where j.jobID=? and j.userID = u.userID";
   $param = array('i', &$jobID);
   $result = getSQLResultP($sql, $param);
 

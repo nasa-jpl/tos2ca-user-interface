@@ -192,7 +192,7 @@ async function jobSetup(jobID, fileArr)
     var file = fileArr[i];
     
     // get ForTraCC file only to set up time array
-    if (file.indexOf('ForTraCC') != -1)
+    if (file.indexOf('ForTraCC') != -1 || file.indexOf('AuxGeoIR') != -1)
     {
       var geoData = await getJsonByKeyfromS3(file);
 
@@ -218,7 +218,7 @@ async function jobSetup(jobID, fileArr)
   {
     var file = fileArr[i];
     
-    if (file.indexOf('ForTraCC') === -1)
+    if (file.indexOf('ForTraCC') === -1 || file.indexOf('AuxGeoIR') === -1)
     {
       var geoData = await getJsonByKeyfromS3(file);
 

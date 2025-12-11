@@ -2,7 +2,7 @@
 
   require_once('common.php');
 
-  $mypath = '/data/code/data-dictionaries/';
+  $mypath = ''; // path to your dictionary JSON files
 
   $key = $_GET['key']; 
   $key = myDecrypt($key);

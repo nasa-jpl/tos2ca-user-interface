@@ -28,7 +28,7 @@
 
   if (count($_GET) > 1)
   {
-    header("Location: https://tos2ca-dev1.jpl.nasa.gov/error.php");
+    header("Location: 404.html");
     die();
   }
   else
@@ -36,7 +36,7 @@
     $jobID = $_GET['jobID'];
     if (!preg_match("/^[0-9]*$/", $jobID))
     {
-      header("Location: https://tos2ca-dev1.jpl.nasa.gov/error.php");
+      header("Location: 404.html");
       die();
     }
   }

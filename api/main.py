@@ -348,7 +348,7 @@ def getUserIDList(conn, cur, email):
 
 
 def mysqlconnect():
-  conn = pymysql.connect(host="tos2cadev1.ctznfzbiztp3.us-west-2.rds.amazonaws.com",
+  conn = pymysql.connect(host="your-database-server",
                        user=username,
                        passwd=passwd,
                        db=dbname)
@@ -358,7 +358,7 @@ def mysqlconnect():
 
 
 from pathlib import Path
-download_dir = '/home/qvu/wrk/python/anomaly-detection/src/utils/downloads'
+download_dir = 'downloads'
 
 def getMonthlyData(month): 
   fname = f'{download_dir}/{month}.txt'
@@ -373,9 +373,9 @@ app.include_router(api_router)
 
 if __name__ == "__main__":
   uvicorn.run("main:app", 
-              host="tos2ca-dev1.jpl.nasa.gov", 
+              host="yourwebsite.com", 
               port=8080, 
-              ssl_keyfile="/etc/pki/tls/certs/tos2ca-dev1.key", 
-              ssl_certfile="/etc/pki/tls/certs/tos2ca-dev1.crt",
+              ssl_keyfile="/path/to/key/keyfile.key", 
+              ssl_certfile="/path/to/certs/certfile.crt",
               reload=True)
 

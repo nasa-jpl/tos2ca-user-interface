@@ -3,24 +3,27 @@
   require_once('JdbcUtility.php');
   require_once('common.php');
 
-  $params = $_POST['params'];
-  $desc = $_POST['desc'];
- 
+  $userID = $_GET['userID'];
+  $stage = $_GET['stage'];
+  $dataset = $_GET['dataset'];
+  $variable = $_GET['variable'];
+  $polygon = $_GET['polygon'];
+  $startDate = $_GET['startDate'];
+  $endDate = $_GET['endDate'];
+  $ineqOperator = $_GET['ineqOperator'];
+  $ineqValue = $_GET['ineqValue'];
+  $status = $_GET['status'];
+  $desc = $_GET['desc'];
+  $algorithm = $_GET['algorithm'];
+  $warmerToggle = $_GET['warmerToggle'];
+  $warmerThreshold = $_GET['warmerThreshold'];
 
-  argumentCountValidate($_POST, 2);
 
-  $arr = explode(";", $params);
-  $userID = $arr[0];
-  $stage = $arr[1];
-  $dataset = $arr[2];
-  $variable = $arr[3];
-  $polygon = $arr[4];
-  $startDate = $arr[5];
-  $endDate = $arr[6];
-  $ineqOperator = $arr[7];
-  $ineqValue = $arr[8];
-  $status = $arr[9];
+  //validate url
+  //checkURL(parse_url($_SERVER['REQUEST_URI']));
 
+  //validate input
+  argumentCountValidate($_GET, 14);
 
   jobIDValidate($userID);
   stageCheck($stage);
@@ -30,23 +33,25 @@
   timeTagValidate($startDate); //2024-07-18 00:00:00
   timeTagValidate($endDate); //2024-07-18 00:00:00
   ineqOperatorCheck($ineqOperator);
-  jobIDValidate($ineqValue);  //number only
+  numberCheck($ineqValue);  //number only
   statusCheck($status);
   descriptionCheck($desc);
-
-  $sql = "";
-  $param = array();
-  if ($desc == "")
-  {
-    $sql = "INSERT INTO jobs (userID, stage, dataset, variable, coords, startDate, endDate, ineqOperator, ineqValue, status) VALUES (?, ?, ?, ?, ST_PolygonFromText(?), ?, ?, ?, ?, ?)";
-    $param = array('isssssssss', &$userID, &$stage, &$dataset, &$variable, &$polygon, &$startDate, &$endDate, &$ineqOperator, &$ineqValue, &$status);
+  specialCharacterCheck($algorithm);
+  if ($algorithm == 'auxgeoir' && $warmerToggle == 'on') {
+    numberCheck($warmerThreshold); //number only
+    specialCharacterCheck($warmerToggle);
+  } elseif ($algorithm == 'auxgeoir' && $warmerToggle == 'off') {
+    nullValidate($warmerThreshold); //number only
+    $warmerThreshold = NULL;
+  } else {
+    nullValidate($warmerThreshold);
+    $warmerThreshold = NULL;
+    nullValidate($warmerToggle);
+    $warmerToggle = NULL;
   }
-  else
-  {
-    $sql = "INSERT INTO jobs (userID, stage, dataset, variable, coords, startDate, endDate, ineqOperator, ineqValue, status, description) VALUES (?, ?, ?, ?, ST_PolygonFromText(?), ?, ?, ?, ?, ?, ?)";
-    $param = array('issssssssss', &$userID, &$stage, &$dataset, &$variable, &$polygon, &$startDate, &$endDate, &$ineqOperator, &$ineqValue, &$status, &$desc);
-  }
 
+  $sql = "INSERT INTO jobs (userID, stage, dataset, variable, coords, startDate, endDate, ineqOperator, ineqValue, status, description, algorithm, warmerToggle, warmerValue) VALUES (?, ?, ?, ?, ST_PolygonFromText(?), ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+  $param = array('issssssssssssi', &$userID, &$stage, &$dataset, &$variable, &$polygon, &$startDate, &$endDate, &$ineqOperator, &$ineqValue, &$status, &$desc, &$algorithm, &$warmerToggle, &$warmerThreshold);
   $affected_rows = executeSQL($sql, $param);
   echo($affected_rows);
 

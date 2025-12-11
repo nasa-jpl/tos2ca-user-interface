@@ -9,7 +9,7 @@ async function init()
 {
   try
   {
-    let url = 'https://tos2ca-dev1.s3.amazonaws.com/';
+    let url = 'https://your-bucket-name.s3.amazonaws.com/';
     const req = await fetch(url);
     const res = await req.json();
   }

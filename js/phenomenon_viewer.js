@@ -103,9 +103,11 @@ function getLatlngBounds(coords)
 
 async function getJsonByKeyfromS3(key, cell)
 {
+  console.log(`getJsonByKeyfromS3()`);
   var url = `${approot}/GetJsonByKey.php?key=${key}`;
   var json = await fetchData(url, cell);
   console.log(`getJsonByKeyfromS3():: json: ${json}`);
+  console.log(json);
   return json;
 }
 
@@ -156,20 +158,26 @@ async function jobSetup(jobID, fileArr, cell)
   var end_date = job.endDate;
   var dataset = job.dataset;
   var variable = job.variable;
+  var algorithm = job.algorithm;
   var inequality = job.ineqOperator;
   var inequality_value = job.ineqValue;
   var desc = job.description;
+  var warmer_toggle = job.warmerToggle;
+  var warmer_value = job.warmerValue;
   if (job.coords === '')
   {
     setInnerHTML('date_range', 'Not available');
     setInnerHTML('dataset', dataset);
     setInnerHTML('variable', variable);
+    setInnerHTML('algorithm', 'Not available');
     setInnerHTML('inequality', 'Not available');
     setInnerHTML('inequality_value', 'Not available');
     setInnerHTML('desc_value', desc);
 
     return;
   }
+
+
 
   var coords = job.coords;
   var latlng_bounds = getLatlngBounds(coords);
@@ -205,24 +213,56 @@ async function jobSetup(jobID, fileArr, cell)
   setInnerHTML('date_range', dstr);
   setInnerHTML('dataset', dataset);
   setInnerHTML('variable', variable);
+  setInnerHTML('algorithm', algorithm);
   setInnerHTML('inequality', inequality);
   setInnerHTML('inequality_value', inequality_value);
   setInnerHTML('desc_value', desc);
+
+  if (algorithm == 'auxgeoir') {
+    console.log('brian');
+    let table = document.getElementById("infoTable");
+
+    let newRow1 = table.insertRow(-1);
+    let cell1 = newRow1.insertCell(0);
+    let cell2 = newRow1.insertCell(1);
+    cell1.textContent = 'Warmer Toggle: ';
+    cell2.textContent = warmer_toggle;
+    cell1.setAttribute('class', 'job_label');
+    cell2.setAttribute('class', 'normal12'); 
+    cell2.setAttribute('id', 'warmer_toggle');
+    cell2.setAttribute('style', 'padding-left: 5px;');
+
+
+    let newRow2 = table.insertRow(-1);
+    let cell3 = newRow2.insertCell(0);
+    let cell4 = newRow2.insertCell(1);
+    cell3.textContent = 'Warmer Value: ';
+    cell4.textContent = warmer_value;
+    cell3.setAttribute('class', 'job_label');
+    cell4.setAttribute('class', 'normal12'); 
+    cell4.setAttribute('id', 'warmer_value');
+    cell4.setAttribute('style', 'padding-left: 5px;');
+  }
   
   myJson.jobID = jobID;
   myJson.job = job;
   myJson.latLngBounds = latLngBounds;
 
+  // get time entries on timeTable
   myJson.toc = [];
   for (var i=0; i<fileArr.length; i++)
   {
     var file = fileArr[i];
     
     // get ForTraCC file only to set up time array
-    if (file.indexOf('ForTraCC') != -1)
+    if (file.indexOf('ForTraCC') != -1 || file.indexOf('AuxGeoIR') != -1)
     {
+      console.log('jobSetup():: file');
+      console.log(file);
 
       var geoData = await getJsonByKeyfromS3(file, cell);
+      console.log('jobSetup():: geoData');
+      console.log(geoData);
 
       for (var n=0; n<geoData.length; n++)
       {
@@ -259,8 +299,12 @@ function showFeature(anomaly, timestep, zoomTo)
 {
 
   var toc = myJson.toc[anomaly-1];
+  console.log('showFeature()::toc');
+  console.log(toc);
 
   var features = toc.timesteps[timestep].features;
+  console.log('showFeature()::features');
+  console.log(features);
 
   for (var i=0; i<features.length; i++)
   {
@@ -415,6 +459,7 @@ function onClick(e)
 
   var select = document.getElementById('dates');
   var date = select.options[select.selectedIndex].value;
+  console.log(date);
 
   if (current_png_layer === null)
   {
@@ -505,7 +550,7 @@ async function getTimeSteps(selected_anomaly, cell)
   {
     var file = fileArr[i];
     
-    if (file.indexOf('ForTraCC') === -1)
+    if (file.indexOf('ForTraCC') === -1 || file.indexOf('AuxGeoIR') === -1)
     {
 
       var s = file.indexOf('-');
@@ -1038,7 +1083,6 @@ function doGetJobIDCancel()
   console.log('doGetJobIDCancel()');
   modal = document.querySelector('.modal');
   modal.close();
-  setDisplay('jobID_div', 'none');
 }
 
 async function viewPhenomenon(jobID)
@@ -1046,12 +1090,13 @@ async function viewPhenomenon(jobID)
   var url = `${approot}/GetAllFileByJobID.php?jobID=${jobID}`;
   
   let filelist = await fetchTextData(url);
-  console.log(`filelist = [${filelist}]`);
+  //console.log(`filelist = [${filelist}]`);
   console.log(filelist);
   if (!isEmpty(filelist))
   {
     fileArr = filelist.split(';');
     fileArr.sort();
+    console.log(`fileArr.length = [${fileArr.length}]`);
     jobSetup(jobID, fileArr);
   }
   else
@@ -1065,7 +1110,7 @@ async function viewPhenomenon(jobID)
 function viewAnotherJob()
 {
   console.log('viewAnotherJob()');
-  window.location.href = 'https://tos2ca-dev1.jpl.nasa.gov/phenomenon_viewer.php';
+  window.location.href = 'https://yourwebsite.com/phenomenon_viewer.php';
 }
 
 

@@ -3,11 +3,14 @@
 }
 
 .vis_main-wrapper {
-    overflow: hidden;
-    overflow-y: auto;
+    overflow: auto;
     display: flex;
     flex-flow: column nowrap;
     width: 100%;
+    font-family: tahoma;
+    font-size: 14px;
+    max-width: unset;
+    padding: 0px calc(max(0px, (100% - 1240px) / 2));
 }
 
 .vis_subheader-text {
@@ -20,6 +23,12 @@
     font-weight: bold;
     font-size: 16px;
     text-decoration: underline;
+}
+
+.vis_job-summ-wrapper {
+    margin-bottom: 8px;
+    border: 1px solid black;
+    padding: 4px;
 }
 
 .vis_job-summ-content {}
@@ -40,18 +49,60 @@
     font-size: 14px;
 }
 
-.vis_map_container {
-    height: 300px;
+.vis_map-container {
+    height: 360px;
 }
 
-.vis_anom_summary_list {
-    
+.vis_map-time-controls {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    justify-content: space-between;
 }
+
+.vis_map-time-select {
+    flex-basis: 225px;
+    width: 225px;
+    display: block;
+}
+
+.vis_map-time-steppers {
+    flex-basis: 100px;
+    width: 100px;
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    justify-content: space-around;
+}
+
+.vis_map-time-step-control {
+    width: 25px;
+    height: 25px;
+    font-size: 24px;
+    line-height: 25px;
+    flex-basis: 25px;
+    cursor: pointer;
+}
+
+.vis_anom_summary_list {}
 
 .vis_charting-content {
     flex: 1 1;
     display: flex;
     flex-flow: column nowrap;
+}
+
+.vis_chart-node-wrapper {
+    display: flex;
+    flex-flow: row nowrap;
+    height: 625px;
+    padding: 12px 0px;
+    border-bottom: 1px solid #959595;
+    position: relative;
+    overflow: hidden;
+}
+.vis_chart-node-wrapper:last-of-type {
+    border-bottom: none;
 }
 
 .vis_header-form {
@@ -69,7 +120,38 @@
     flex-grow: 0.6;
 }
 
-.vis_controls-row {}
+.vis_controls-column {
+    display: flex;
+    flex-flow: column;
+    flex: 1 1;
+}
+
+.vis_controls-column:first-of-type {
+    padding-right: 7px;
+    border-right: 1px solid #AAA;
+}
+
+.vis_controls-column:last-of-type {
+    padding-left: 7px;
+}
+
+.vis_controls-row {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.vis_controls-row-top {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.vis_job-fetch-btn {
+    margin-left: 4px;
+}
 
 .vis_controls-row-max {
     flex: 1 1;
@@ -80,7 +162,14 @@
     display: flex;
     flex-flow: row nowrap;
     justify-content: space-between;
-    margin-bottom: 8px;
+    flex: 1 1;
+}
+
+.vis_labeled-select-small {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: space-between;
+    margin-bottom: 4px;
 }
 
 .vis_button-row {
@@ -88,5 +177,73 @@
 }
 
 .vis_charts-list {
-    padding: 12px 0px;
+    /* padding: 12px 0px; */
+}
+
+.vis_btn {
+    cursor: pointer;
+}
+
+.vis_map-info {
+    position: relative;
+    padding: 2px 4px;
+    background: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+    /* width: 100px; */
+}
+
+.vis_map-info-label {
+    display: inline-block;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.vis_map-info-value {
+    display: inline-block;
+    text-align: right;
+}
+
+.vis_chart-error-content {
+    display: flex;
+    flex-flow: column nowrap;
+    width: 100%;
+}
+
+.vis_chart-error-text {
+    flex: 1 1;
+    display: block;
+}
+
+.vis_chart-error-title {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.vis_chart-error-subtext {
+    opacity: 0.75;
+}
+
+.vis_chart-error-clear {
+    flex-basis: 24px;
+    height: 24px;
+    text-align: right;
+}
+
+.vis_chart-controls-menu {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    transform: translate(calc(100% - 32px), 0px);
+}
+
+.vis_chart-controls-menu.vis_open {
+    transform: translate(0px, 0px);
+    box-shadow: -6px 0px 7px 1px rgba(0, 0, 0, 0.25);
+    -webkit-box-shadow: -6px 0px 7px 1px rgba(0, 0, 0, 0.25);
+    -moz-box-shadow: -6px 0px 7px 1px rgba(0, 0, 0, 0.25);
+}
+
+.mbutton.vis_btn:disabled {
+    background: #8c96a0;
 }

@@ -1,11 +1,17 @@
 <?php
 
-$key="01234567890123456789012345678901"; // 32 bytes
-$vector="1234567890123412"; // 16 bytes
+// Add keys
+$key=""; // 32 bytes
+$vector=""; // 16 bytes
+
+// Add paths to the JSON files on your filesystem
+$phdefDataDictionary="";
+$curationDataDictionary="";
 
 function displayNotFoundAndExit()
 {
-  header("Location: https://tos2ca-dev1.jpl.nasa.gov/error.php");
+  // Add URL to your error page	
+  header("Location: 404.html");
   die();
 }
 
@@ -16,6 +22,14 @@ function argumentCountValidate($argv, $validNumber)
     displayNotFoundAndExit();
   }
 }
+
+function nullValidate($string)
+{
+  if ($string != 'NULL')
+  {
+    displayNotFoundAndExit();
+  }
+} 
 
 function argumentCountRangeValidate($argv, $min, $max)
 {
@@ -125,6 +139,7 @@ function phenomenonCheck($str)
     displayNotFoundAndExit();
   }
 
+  // Add other types of predefined phenomena, if needed
   if (strpos($str, "wildfire") === false && strpos($str, "hurricane") === false) 
   {
     displayNotFoundAndExit();
@@ -151,6 +166,7 @@ function dictionaryCheck($name)
     displayNotFoundAndExit();
   }
 
+  // Add filenames only to the PhDef and Curation dictionary JSON files
   $dictionaries = [ "tos2ca-phdef-dictionary.json", "tos2ca-data-collection-dictionary.json" ];
 
   if (!in_array($name, $dictionaries))
@@ -248,6 +264,7 @@ function ineqOperatorCheck($op)
     displayNotFoundAndExit();
   }
 
+  // Add types of inequalities you wish to use in PhDef
   $ops = [ "lessThan", "lessThanOrEqualTo", "greaterThan", "greaterThanOrEqualTo", "equalTo", "anomalyEvent" ];
 
   if (!in_array($op, $ops))
@@ -257,4 +274,3 @@ function ineqOperatorCheck($op)
 }
 
 ?>
-

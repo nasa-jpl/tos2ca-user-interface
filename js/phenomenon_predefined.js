@@ -305,37 +305,8 @@ async function doDownload(fname)
 {
   console.log(`doDownload():: fname = ${fname}`);
  
-  /*
-  var idx = fname.indexOf('tos2ca-dev1');
-  if (idx !== -1)
-  {
-    var file = fname.substring(idx+12);
-    file = myCrypt(file);
-    let url = `${approot}/downloadFileFromS3.php?key=${file}`;
-    console.log(url);
-
-    try
-    {
-      const res = await fetch(url, {
-        method: 'GET',
-      });
   
-      const filename = await res.text();
-      console.log(filename);
-  
-      //let href = `${approot}${filename}`;
-      //console.log(href);
-      //document.location.href = href;
-    }
-    catch (error)
-    {
-      console.log(error);
-      alert(error);
-    }
-  }
-  */
-  
-  var idx = fname.indexOf('tos2ca-dev1');
+  var idx = fname.indexOf('your-bucket-name');
   if (idx !== -1)
   {
     var file = fname.substring(idx+12);
@@ -359,7 +330,7 @@ async function doFireDownload(fname)
 {
   console.log(`doFireDownload():: fname = ${fname}`);
  
-  var idx = fname.indexOf('tos2ca-dev1');
+  var idx = fname.indexOf('your-bucket-name');
   if (idx !== -1)
   {
     var file = fname.substring(idx+12);
@@ -403,7 +374,7 @@ function showMask(fname)
   var w = 550;
   var h = 700;
 
-  var url = `https://tos2ca-dev1.jpl.nasa.gov/ShowMask.php?key=${fname}`;
+  var url = `https://yourwebsite.com/ShowMask.php?key=${fname}`;
   console.log('showMask():: url = ' + url);
   window.open(url, '_blank', 'scrollbars=yes,resizable=yes,width='+w+',height='+h);
 }

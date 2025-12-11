@@ -1,6 +1,6 @@
 <?php
 
-require '/data/code/user-interface/aws.phar';
+require 'aws.phar';
 require 'common.php';
 
 $key = $_GET['key'];
@@ -23,7 +23,7 @@ $safe_filename = strtr($il1_filename, $to_underscore, str_repeat("_", strlen($to
 $filename = $safe_filename . ( $safe_filename === $filename ? "" : "; filename*=UTF-8''".rawurlencode($filename) );
 
 $command = $s3->getCommand('GetObject', array(
-  'Bucket'      => 'tos2ca-dev1',
+  'Bucket'      => 'your-bucket-name',
   'Key'         => $key,
   'ContentType' => 'image/png',
   'ResponseContentDisposition' => 'attachment; filename="' . clean($filename) . '"'

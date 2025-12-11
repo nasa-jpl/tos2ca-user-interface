@@ -1,11 +1,11 @@
 <?php
 
-  require '/data/code/user-interface/aws.phar';
+  require 'aws.phar';
   require 'common.php';
 
   $key = $_GET['key'];
   $key = myDecrypt($key);
-  //echo("$key<br>");
+
 
   argumentCountValidate($_GET, 1);
   ncFilenameCheck($key);
@@ -16,13 +16,12 @@
   ]);
 
   $object = $s3->getObject(array(
-    'Bucket' => 'tos2ca-dev1',
+    'Bucket' => 'your-bucket-name',
     'Key' => $key,
   ));
 
   $i = strrpos($key, "/");
   $filename = substr($key, $i+1);
-  //echo("$filename<br>");
 
   $il1_filename = utf8_decode($filename);
   $to_underscore = "\"\\#*;:|<>/?";

@@ -61,7 +61,7 @@
 
 <script>
 
-const dictionary_file = '/data/code/data-dictionaries/tos2ca-phdef-dictionary.json';
+const dictionary_file = 'tos2ca-phdef-dictionary.json';
 const MAX_AREA = 250;  //50x50 
 
 var layers = [];
@@ -247,7 +247,7 @@ function unload()
           <tr>
             <td style="padding-right: 5px;">
               <div style="border: 2px solid; width: 500px; padding: 10px;">
-              <table>
+              <table id="infoTable">
                 <tr>
                   <td class="job_label"> Job ID: </td>
                   <td class="normal12" id="jobID" style="padding-left: 5px;"> jobID </td>
@@ -264,6 +264,10 @@ function unload()
                   <td class="job_label"> Variable: </td>
                   <td class="normal12" id="variable" style="padding-left: 5px;"> variable </td>
                 </tr>
+                <tr>
+                  <td class="job_label"> Algorithm: </td>
+                  <td class="normal12" id="algorithm" style="padding-left: 5px;"> algorithm </td>
+                </tr>                
                 <tr>
                   <td class="job_label"> Inequality: </td>
                   <td class="normal12" id="inequality" style="padding-left: 5px;"> inequality </td>
@@ -284,7 +288,7 @@ function unload()
             <td style="padding-top: 10px; width: 500px;">
               <table>
                 <tr>
-                  <td colspan="3" style="width: 470px; vertical-align:top; text-align: center;">
+                  <td colspan="3" style="width: 499px; vertical-align:top; text-align: center;">
                     <table id="toc_list_table" class="display table-responsive cell-border" role=presentation>
                       <thead>
                         <tr>

@@ -1,6 +1,6 @@
 <?php
 
-require '/data/code/user-interface/aws.phar';
+require 'aws.phar';
 
 $key = $_GET['key'];
 
@@ -22,7 +22,7 @@ $s3 = new Aws\S3\S3Client([
 ]);
 
 $result = $s3->getObject([
-  'Bucket' => 'tos2ca-dev1',
+  'Bucket' => 'your-bucket-name',
   'Key' => $key 
 ]);
 
