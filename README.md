@@ -1,6 +1,6 @@
 # User Interface
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17664955.svg)](https://doi.org/10.5281/zenodo.17664955)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22149467.svg)](https://doi.org/10.5281/zenodo.22149467)
 
 [![Language](https://img.shields.io/packagist/dependency-v/ufo-tech/json-rpc-client-sdk/php?logo=PHP&logoColor=white)](#) [![Language](https://img.shields.io/badge/python-3.9-blue)](#) [![Language](https://img.shields.io/badge/MySQL-version_8-00758F)](#)
 
@@ -28,8 +28,8 @@ The system is designed to be run as part of a LAMP configure and is written in P
 - You will have to update paths to any local files.
 - You will have to update the name of the S3 bucket you want to point to.
 - Look for places in the PHP or JS code that reference URLs, S3 bins, etc. and make sure to update them.
-- Styling for the site is barebones.  Bootstrap is linked to the pages but minimial use of it is made.  It is up to the user to add styling to the front end pages to their preferences.
-- The `common.php` file has a number of common funtions and variales shared through the system (like data dictionary paths)
+- Styling for the site is bare bones.  Bootstrap is linked to the pages but minimal use of it is made.  It is up to the user to add styling to the front end pages to their preferences.
+- The `common.php` file has a number of common functions and variables shared through the system (like data dictionary paths)
 
 ### APIs
 
